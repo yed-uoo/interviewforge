@@ -1,13 +1,124 @@
-<h1>InterviewForge Dashboard</h1>
+{% extends 'base.html' %}
 
-<p>Welcome {{ request.user.full_name }}</p>
+{% block content %}
+<div class="row align-items-center g-4 mb-4 mb-lg-5">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill text-bg-primary px-3 py-2">Dashboard</span>
+            <span class="badge rounded-pill text-bg-light text-secondary border">AI Interview Prep</span>
+        </div>
 
-<ul>
-    <li><a href="/resume/upload/">Upload Resume</a></li>
-    <li><a href="#">Resume Analysis</a></li>
-    <li><a href="#">Mock Interview</a></li>
-    <li><a href="#">Coding Challenges</a></li>
-    <li><a href="#">MCQ Tests</a></li>
-</ul>
+        <h1 class="display-6 fw-semibold mb-3">Welcome back, {{ user.full_name|default:user.username }}</h1>
+        <p class="lead text-secondary mb-4 col-xl-10">
+            Prepare faster with AI-powered analysis, interview simulation, and practice tools built for modern candidates.
+        </p>
 
-<a href="{% url 'logout' %}">Logout</a>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <a href="/resume/upload/" class="btn btn-primary btn-lg px-4">Analyze Resume</a>
+            <button class="btn btn-outline-secondary btn-lg px-4" type="button" disabled>Mock Interview Coming Soon</button>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100 bg-dark text-white">
+            <div class="card-body p-4">
+                <p class="text-uppercase text-white-50 small mb-2">Workspace status</p>
+                <h2 class="h4 fw-semibold mb-3">Your preparation hub</h2>
+                <p class="text-white-75 mb-4">
+                    Track resume readiness, practice interviews, and build confidence with structured preparation.
+                </p>
+                <div class="d-flex justify-content-between align-items-center border-top border-white border-opacity-25 pt-3">
+                    <span class="text-white-50 small">Active modules</span>
+                    <span class="fw-semibold">1 live, 3 upcoming</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div>
+                        <span class="badge text-bg-primary-subtle text-primary-emphasis mb-3">Live</span>
+                        <h5 class="card-title mb-2">Resume Analyzer</h5>
+                    </div>
+                    <span class="fs-4">01</span>
+                </div>
+                <p class="text-secondary flex-grow-1 mb-4">
+                    Upload your resume and get AI-driven ATS insights, keyword gaps, and formatting recommendations.
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="/resume/upload/" class="btn btn-primary">Try Now</a>
+                    <small class="text-secondary">Best for instant resume feedback before applying.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0 bg-light">
+            <div class="card-body p-4 d-flex flex-column opacity-75">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div>
+                        <span class="badge text-bg-secondary mb-3">Coming Soon</span>
+                        <h5 class="card-title mb-2">Mock Interview</h5>
+                    </div>
+                    <span class="fs-4 text-secondary">02</span>
+                </div>
+                <p class="text-secondary flex-grow-1 mb-4">
+                    Practice realistic AI interviews with adaptive questions, timed responses, and performance feedback.
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-secondary" type="button" disabled>Coming Soon</button>
+                    <small class="text-secondary">Designed for behavioral, technical, and role-specific practice.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0 bg-light">
+            <div class="card-body p-4 d-flex flex-column opacity-75">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div>
+                        <span class="badge text-bg-secondary mb-3">Coming Soon</span>
+                        <h5 class="card-title mb-2">Coding Challenges</h5>
+                    </div>
+                    <span class="fs-4 text-secondary">03</span>
+                </div>
+                <p class="text-secondary flex-grow-1 mb-4">
+                    Strengthen problem-solving with curated coding problems, hints, and interview-style explanations.
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-secondary" type="button" disabled>Coming Soon</button>
+                    <small class="text-secondary">Built for whiteboard-style technical interviews.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 shadow-sm border-0 bg-light">
+            <div class="card-body p-4 d-flex flex-column opacity-75">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div>
+                        <span class="badge text-bg-secondary mb-3">Coming Soon</span>
+                        <h5 class="card-title mb-2">MCQ Tests</h5>
+                    </div>
+                    <span class="fs-4 text-secondary">04</span>
+                </div>
+                <p class="text-secondary flex-grow-1 mb-4">
+                    Reinforce concepts with focused multiple-choice assessments and progress tracking across topics.
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-secondary" type="button" disabled>Coming Soon</button>
+                    <small class="text-secondary">Ideal for rapid revision before interviews and screening rounds.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

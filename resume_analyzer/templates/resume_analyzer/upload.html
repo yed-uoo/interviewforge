@@ -1,7 +1,49 @@
-<h1>Upload Resume</h1>
+{% extends 'base.html' %}
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-</form>
+{% block content %}
+<div class="row justify-content-center py-3 py-md-4">
+    <div class="col-12 col-lg-8 col-xl-6">
+        <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="card-body p-4 p-md-5">
+
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary mb-3"
+                         style="width: 64px; height: 64px;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 16V8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M8.5 11.5L12 8L15.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 16.5V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V16.5"
+                                  stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </div>
+
+                    <h1 class="h3 fw-semibold mb-2">Upload Resume</h1>
+                    <p class="text-secondary mb-0">
+                        Get AI-powered ATS insights, formatting feedback, and keyword analysis in seconds.
+                    </p>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="d-grid gap-4">
+                    {% csrf_token %}
+
+                    <div class="border border-2 border-dashed rounded-4 bg-light p-4 p-md-5 text-center">
+                        <div class="mb-3">
+                            <div class="fw-semibold mb-1">Drag and drop your resume here</div>
+                            <div class="text-secondary small">or choose a file from your device</div>
+                        </div>
+
+                        <div class="mx-auto" style="max-width: 320px;">
+                            {{ form.as_p }}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        Analyze Resume
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
