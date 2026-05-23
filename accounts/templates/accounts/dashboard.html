@@ -1,0 +1,13 @@
+<h1>InterviewForge Dashboard</h1>
+
+<p>Welcome {{ request.user.full_name }}</p>
+
+<ul>
+    <li><a href="/resume/upload/">Upload Resume</a></li>
+    <li><a href="#">Resume Analysis</a></li>
+    <li><a href="#">Mock Interview</a></li>
+    <li><a href="#">Coding Challenges</a></li>
+    <li><a href="#">MCQ Tests</a></li>
+</ul>
+
+<a href="{% url 'logout' %}">Logout</a>
