@@ -1,5 +1,46 @@
-<h1>Extracted Resume Text</h1>
+<h1>AI Resume Analysis Report</h1>
 
-<pre>
-{{ resume.extracted_text }}
-</pre>
+<h2>ATS Score</h2>
+<p>{{ analysis.ats_score }}/100</p>
+
+<h2>Detected Skills</h2>
+<ul>
+{% for skill in analysis.detected_skills %}
+    <li>{{ skill }}</li>
+{% endfor %}
+</ul>
+
+<h2>Missing Skills</h2>
+<ul>
+{% for skill in analysis.missing_skills %}
+    <li>{{ skill }}</li>
+{% endfor %}
+</ul>
+
+<h2>Strengths</h2>
+<ul>
+{% for item in analysis.strengths %}
+    <li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+<h2>Weaknesses</h2>
+<ul>
+{% for item in analysis.weaknesses %}
+    <li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+<h2>Suggestions</h2>
+<ul>
+{% for item in analysis.suggestions %}
+    <li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+<h2>Recommended Roles</h2>
+<ul>
+{% for role in analysis.recommended_roles %}
+    <li>{{ role }}</li>
+{% endfor %}
+</ul>

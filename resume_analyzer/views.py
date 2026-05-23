@@ -1,7 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .forms import ResumeUploadForm
 from .utils import extract_text_from_pdf
+from .ai_analyzer import analyze_resume
 
 
 @login_required
@@ -24,10 +25,14 @@ def upload_resume(request):
             resume.extracted_text = extracted_text
             resume.save()
 
+            analysis = analyze_resume(extracted_text)
+
             return render(
                 request,
                 'resume_analyzer/result.html',
-                {'resume': resume}
+                {
+                    'analysis': analysis
+                }
             )
 
     else:
