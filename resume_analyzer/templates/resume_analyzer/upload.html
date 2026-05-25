@@ -22,6 +22,11 @@
                         Get AI-powered ATS insights, formatting feedback, and keyword analysis in seconds.
                     </p>
                 </div>
+                {% if error %}
+<div class="alert alert-danger mb-4">
+    {{ error }}
+</div>
+{% endif %}
 
                 <form method="post" enctype="multipart/form-data" class="d-grid gap-4">
                     {% csrf_token %}
