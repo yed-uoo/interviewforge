@@ -1,5 +1,7 @@
+from email.mime import text
 import os
 import json
+import re
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -9,6 +11,92 @@ client = Groq(
     api_key=os.getenv("GROQ_API_KEY")
 )
 
+def validate_resume_document(text):
+    if not text or len(text.strip()) < 80:
+        return False
+
+    prompt = f"""
+You are a strict document classifier for a resume analysis platform.
+
+Task:
+Determine whether the uploaded document is a PROFESSIONAL RESUME / CV.
+
+A VALID RESUME usually contains:
+- candidate name
+- contact details (email / phone / LinkedIn / GitHub)
+- education
+- technical skills
+- projects
+- internships
+- work experience
+- certifications
+- summary/objective
+
+ACCEPT:
+- software engineer resume
+- student resume
+- fresher resume
+- internship resume
+- CV
+
+REJECT:
+- question papers
+- viva documents
+- assignments
+- study notes
+- tutorials
+- project reports
+- certificates
+- invoices
+- bills
+- books
+- forms
+- documentation
+- random PDFs
+
+Important:
+A fresher/student resume with projects and skills but no work experience is STILL a valid resume.
+
+Return ONLY valid JSON:
+
+{{
+    "is_resume": true
+}}
+
+or
+
+{{
+    "is_resume": false
+}}
+
+Document:
+{text[:5000]}
+"""
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0
+        )
+
+        content = response.choices[0].message.content.strip()
+
+        if content.startswith("```"):
+            content = content.replace("```json", "").replace("```", "").strip()
+
+        data = json.loads(content)
+
+        return data.get("is_resume", False)
+
+    except Exception as e:
+        print("VALIDATION ERROR:", e)
+        return False
 
 def analyze_resume(resume_text):
     prompt = f"""
