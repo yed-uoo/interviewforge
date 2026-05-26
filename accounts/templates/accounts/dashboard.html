@@ -8,7 +8,7 @@
             <span class="badge rounded-pill text-bg-light text-secondary border">AI Interview Prep</span>
         </div>
 
-        <h1 class="display-6 fw-semibold mb-3">Welcome back, {{ user.full_name|default:user.username }}</h1>
+        <h1 class="display-6 fw-semibold mb-3">Welcome back, {{ user.full_name|default:user.username|title }}</h1>
         <p class="lead text-secondary mb-4 col-xl-10">
             Prepare faster with AI-powered analysis, interview simulation, and practice tools built for modern candidates.
         </p>
@@ -52,6 +52,11 @@
                 </p>
                 <div class="d-grid gap-2">
                     <a href="/resume/upload/" class="btn btn-primary">Try Now</a>
+                    <a href="{% url 'analysis_history' %}" class="btn btn-outline-secondary w-100">
+
+    View History
+
+</a>
                     <small class="text-secondary">Best for instant resume feedback before applying.</small>
                 </div>
             </div>
