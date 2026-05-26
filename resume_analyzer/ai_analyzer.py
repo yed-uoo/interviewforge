@@ -3,6 +3,8 @@ import os
 import json
 import re
 from groq import Groq
+from groq import APIError, AuthenticationError, RateLimitError
+from groq import APITimeoutError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -93,10 +95,24 @@ Document:
         data = json.loads(content)
 
         return data.get("is_resume", False)
-
-    except Exception as e:
-        print("VALIDATION ERROR:", e)
+    
+    except AuthenticationError:
+        print("VALIDATION ERROR: invalid API key")
         return False
+
+    except RateLimitError:
+        print("VALIDATION ERROR: rate limited")
+        return False
+
+    except APITimeoutError:
+        print("VALIDATION ERROR: timeout")
+        return False
+
+    except json.JSONDecodeError:
+        print("VALIDATION ERROR: malformed response")
+        return False
+
+    
 
 def analyze_resume(resume_text):
     prompt = f"""
@@ -194,21 +210,40 @@ Detected skills rules:
 Resume:
 {resume_text}
 """
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.1
+        )
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.1
-    )
+        content = response.choices[0].message.content.strip()
 
-    content = response.choices[0].message.content.strip()
+        if content.startswith("```"):
+            content = content.replace("```json", "").replace("```", "").strip()
 
-    if content.startswith("```"):
-        content = content.replace("```json", "").replace("```", "").strip()
+        return json.loads(content)
+    
+    except AuthenticationError:
+        raise Exception("AI service authentication failed.")
 
-    return json.loads(content)
+    except RateLimitError:
+        raise Exception("AI service is currently busy. Please try again in a moment.")
+
+    except APITimeoutError:
+        raise Exception("AI analysis timed out. Please try again.")
+    
+    except json.JSONDecodeError:
+        raise Exception("AI returned an invalid response.")
+
+    except APIError:
+        raise Exception("AI service error. Please try again.")
+
+    except Exception as e:
+        print("ANALYSIS ERROR:", e)
+        raise Exception("Unexpected AI analysis error.")
