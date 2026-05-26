@@ -1,8 +1,9 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .forms import ResumeUploadForm
 from .utils import extract_text_from_pdf
 from .ai_analyzer import analyze_resume, validate_resume_document
+from .models import Resume
 import os
 
 
@@ -56,6 +57,8 @@ def upload_resume(request):
                 resume = form.save(commit=False)
                 resume.user = request.user
                 resume.extracted_text = extracted_text
+                resume.ats_score = analysis.get('ats_score', 0)
+                resume.analysis_data = analysis
                 resume.save()
 
                 return render(
@@ -93,5 +96,33 @@ def upload_resume(request):
         'resume_analyzer/upload.html',
         {
             'form': form
+        }
+    )
+@login_required
+def analysis_history(request):
+    resumes = Resume.objects.filter(
+        user=request.user
+    ).order_by('-uploaded_at')
+
+    return render(
+        request,
+        'resume_analyzer/history.html',
+        {
+            'resumes': resumes
+        }
+    )
+@login_required
+def view_analysis_report(request, resume_id):
+    resume = get_object_or_404(
+        Resume,
+        id=resume_id,
+        user=request.user
+    )
+
+    return render(
+        request,
+        'resume_analyzer/result.html',
+        {
+            'analysis': resume.analysis_data
         }
     )
