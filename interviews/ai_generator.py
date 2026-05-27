@@ -19,7 +19,7 @@ def generate_interview_questions(
 ):
     if used_resume_context:
         prompt = f"""
-You are an expert technical interviewer.
+You are an senior technical interviewer.
 
 Generate highly personalized interview questions
 based on the candidate's actual resume.
@@ -42,10 +42,41 @@ Generate:
 2. 7 technical questions
 3. 3 coding questions
 
+STRICT RULES:
+
+1. NEVER invent projects, companies, systems, products, or experience not explicitly present in resume context.
+
+2. If resume context exists:
+
+   - ground technical questions ONLY in stated skills, tools, technologies, and projects
+
+   - ask follow-up questions based on actual evidence
+
+   - do NOT hallucinate fictional systems
+
+3. If no resume context:
+
+   - generate role-realistic but generic questions
+
+   - do NOT assume specific projects
+
+4. Coding questions must match experience level:
+
+   - fresher → arrays, strings, hashmaps, SQL basics, API logic
+
+   - mid → API design, debugging, optimization, DB design
+
+   - senior → architecture, scalability, distributed systems
+
+5. HR questions must be realistic recruiter questions.
+
+6. Technical questions must sound like a real engineering interviewer.
+
 Rules:
 - Ask about technologies ACTUALLY present in the resume
 - Ask project-specific questions
 - Ask architecture/design questions if projects suggest backend depth
+- Never create logically inconsistent coding questions.
 - Match difficulty to experience level
 - If job description exists, partially align questions to JD
 - Maintain stack consistency
@@ -54,7 +85,7 @@ Rules:
 - No markdown
 - No explanations
 
-JSON format:
+OUTPUT JSON ONLY:
 
 {{
     "hr_questions": [],

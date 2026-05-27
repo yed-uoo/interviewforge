@@ -66,3 +66,16 @@ class InterviewGeneratorForm(forms.Form):
             self.fields['existing_resume'].queryset = Resume.objects.filter(
                 user=user
             ).order_by('-uploaded_at')
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        existing_resume = cleaned_data.get('existing_resume')
+        resume_file = cleaned_data.get('resume_file')
+
+        if existing_resume and resume_file:
+            raise forms.ValidationError(
+                "Choose either an existing analyzed resume or upload a new resume, not both."
+            )
+
+        return cleaned_data        

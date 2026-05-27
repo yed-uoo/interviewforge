@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+import os
 
 
 class Resume(models.Model):
@@ -30,4 +31,4 @@ class Resume(models.Model):
     )
 
     def __str__(self):
-        return f"{self.user.username} Resume"
+        return os.path.basename(self.file.name)
