@@ -1,14 +1,73 @@
 import json
 import os
+import re
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
 
+    if not api_key:
+        raise Exception(
+            "AI service configuration missing."
+        )
+
+    return Groq(api_key=api_key)
+
+def sanitize_inputs(
+    role,
+    experience_level,
+    job_description,
+    resume_text
+):
+    role = role.strip()
+    experience_level = experience_level.strip().lower()
+    job_description = job_description.strip()
+    resume_text = resume_text.strip()
+
+    if not role:
+        raise Exception(
+            "Target role is required."
+        )
+
+    if len(role) > 100:
+        raise Exception(
+            "Role input too long."
+        )
+
+    if not re.match(
+        r"^[a-zA-Z0-9\s\-/()+.&]+$",
+        role
+    ):
+        raise Exception(
+            "Invalid role input."
+        )
+
+    valid_levels = [
+        "fresher",
+        "mid",
+        "senior"
+    ]
+
+    if experience_level not in valid_levels:
+        raise Exception(
+            "Invalid experience level."
+        )
+
+    if len(job_description) > 3000:
+        job_description = job_description[:3000]
+
+    if len(resume_text) > 6000:
+        resume_text = resume_text[:6000]
+
+    return (
+        role,
+        experience_level,
+        job_description,
+        resume_text
+    )
 
 def generate_interview_questions(
     role,
@@ -17,6 +76,17 @@ def generate_interview_questions(
     resume_text="",
     used_resume_context=False
 ):
+    role, experience_level, job_description, resume_text = sanitize_inputs(
+
+        role,
+
+        experience_level,
+
+        job_description,
+
+        resume_text
+
+    )
     if used_resume_context:
         prompt = f"""
 You are an senior technical interviewer.
@@ -133,6 +203,7 @@ JSON format:
 """
 
     try:
+        client = get_groq_client()
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
@@ -141,10 +212,33 @@ JSON format:
                     "content": prompt
                 }
             ],
-            temperature=0.4
+            temperature=0.4,
+            timeout=20
         )
 
-        content = response.choices[0].message.content.strip()
+        if not response:
+            raise Exception(
+                "No AI response received."
+            )
+
+        if not response.choices:
+            raise Exception(
+                "Empty AI response."
+            )
+
+        message = response.choices[0].message
+
+        if not message:
+            raise Exception(
+                "Missing AI response message."
+            )
+
+        if not message.content:
+            raise Exception(
+                "Blank AI response."
+            )
+
+        content = message.content.strip()
 
         if content.startswith("```"):
             content = (
@@ -154,24 +248,57 @@ JSON format:
                 .strip()
             )
 
-        data = json.loads(content)
+        start = content.find("{")
+        end = content.rfind("}")
 
-        required_keys = [
-            "hr_questions",
-            "technical_questions",
-            "coding_questions"
-        ]
+        if start == -1 or end == -1:
+            raise Exception(
+                "Malformed AI response."
+            )
 
-        for key in required_keys:
+        json_content = content[start:end + 1]
+
+        data = json.loads(json_content)
+
+        expected_schema = {
+            "hr_questions": 5,
+            "technical_questions": 7,
+            "coding_questions": 3
+        }
+
+        for key, expected_count in expected_schema.items():
             if key not in data:
                 raise Exception(
-                    "Malformed AI response."
+                    f"Missing AI response field: {key}"
                 )
+
+            if not isinstance(data[key], list):
+                raise Exception(
+                    f"{key} must be a list."
+                )
+
+            if len(data[key]) != expected_count:
+                raise Exception(
+                    f"{key} has invalid question count."
+                )
+
+            for item in data[key]:
+                if not isinstance(item, str):
+                    raise Exception(
+                        f"{key} contains invalid data."
+                    )
 
         return data
 
     except Exception as e:
         print("INTERVIEW AI ERROR:", e)
+
+        error_message = str(e).lower()
+
+        if "timeout" in error_message:
+            raise Exception(
+                "Interview generation took too long. Please try again."
+            )
 
         raise Exception(
             "Interview generation temporarily unavailable. Please try again shortly."
