@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mx-auto" style="max-width: 1100px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="fw-bold mb-2">
+                Interview History
+            </h1>
+
+            <p class="text-secondary mb-0">
+                View previously generated interview question sets.
+            </p>
+        </div>
+
+        <a href="{% url 'generate_interview' %}"
+           class="btn btn-primary rounded-3">
+            Generate New Set
+        </a>
+    </div>
+
+    {% if sessions %}
+        <div class="d-flex flex-column gap-3">
+
+            {% for session in sessions %}
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+
+                            <div>
+
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    {% if session.used_resume_context %}
+                                        <span class="badge text-bg-success">
+                                            Personalized
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">
+                                            Generic
+                                        </span>
+                                    {% endif %}
+
+                                    <span class="badge text-bg-light border text-dark">
+                                        {{ session.experience_level|title }}
+                                    </span>
+                                </div>
+
+                                <h5 class="fw-semibold mb-2">
+                                    {{ session.role }}
+                                </h5>
+
+                                <p class="text-secondary mb-1">
+                                    Generated on
+                                    {{ session.created_at|date:"M d, Y • h:i A" }}
+                                </p>
+
+                                {% if session.used_resume_context and session.resume %}
+                                    <p class="small text-secondary mb-0">
+                                        Resume used:
+                                        {{ session.resume.file.name|cut:"resumes/" }}
+                                    </p>
+                                {% else %}
+                                    <p class="small text-secondary mb-0">
+                                        Generated without resume personalization
+                                    </p>
+                                {% endif %}
+
+                            </div>
+
+                            <div>
+                                <a href="{% url 'interview_detail' session.id %}"
+                                   class="btn btn-outline-primary rounded-3">
+                                    View Questions
+                                </a>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+        <div class="text-center py-5">
+            <h4 class="fw-semibold">
+                No interview history yet
+            </h4>
+
+            <p class="text-secondary">
+                Generate your first interview question set.
+            </p>
+
+            <a href="{% url 'generate_interview' %}"
+               class="btn btn-primary mt-3">
+                Generate Questions
+            </a>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

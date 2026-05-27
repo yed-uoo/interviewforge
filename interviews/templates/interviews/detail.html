@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mx-auto" style="max-width: 1300px;">
+
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-5">
+
+        <div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+
+                {% if session.used_resume_context %}
+                    <span class="badge text-bg-success">
+                        Personalized
+                    </span>
+                {% else %}
+                    <span class="badge text-bg-secondary">
+                        Generic
+                    </span>
+                {% endif %}
+
+                <span class="badge text-bg-light border text-dark">
+                    {{ session.experience_level|title }}
+                </span>
+
+            </div>
+
+            <h1 class="fw-bold mb-2">
+                Interview Question Set
+            </h1>
+
+            <p class="text-secondary fs-5 mb-0">
+                {{ session.role }}
+            </p>
+        </div>
+
+        <a href="{% url 'interview_history' %}"
+           class="btn btn-outline-secondary rounded-3">
+            Back to History
+        </a>
+
+    </div>
+
+    <!-- Metadata -->
+    <div class="card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-body p-4 p-md-5">
+
+            <h5 class="fw-semibold mb-4">
+                Session Details
+            </h5>
+
+            <div class="row g-4">
+
+                <div class="col-md-4">
+                    <p class="small text-secondary mb-1">
+                        Generated On
+                    </p>
+                    <p class="fw-medium mb-0">
+                        {{ session.created_at|date:"M d, Y • h:i A" }}
+                    </p>
+                </div>
+
+                <div class="col-md-4">
+                    <p class="small text-secondary mb-1">
+                        Generation Type
+                    </p>
+                    <p class="fw-medium mb-0">
+                        {% if session.used_resume_context %}
+                            Resume-Personalized
+                        {% else %}
+                            Generic Role-Based
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="col-md-4">
+                    <p class="small text-secondary mb-1">
+                        Experience
+                    </p>
+                    <p class="fw-medium mb-0">
+                        {{ session.experience_level|title }}
+                    </p>
+                </div>
+
+                <div class="col-md-12">
+                    <p class="small text-secondary mb-1">
+                        Resume Used
+                    </p>
+
+                    {% if session.resume %}
+                        <p class="fw-medium mb-0">
+                            {{ session.resume.file.name|cut:"resumes/" }}
+                        </p>
+                    {% else %}
+                        <p class="fw-medium text-secondary mb-0">
+                            No resume used
+                        </p>
+                    {% endif %}
+                </div>
+
+                {% if session.job_description %}
+                <div class="col-md-12">
+                    <p class="small text-secondary mb-2">
+                        Job Description
+                    </p>
+
+                    <div class="border rounded-3 p-3 bg-light">
+                        <small>
+                            {{ session.job_description }}
+                        </small>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="row g-4 mb-4">
+
+        <!-- HR -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4 p-md-5">
+
+                    <h3 class="fw-bold mb-4">
+                        HR Questions
+                    </h3>
+
+                    <ol class="ps-3 mb-0">
+                        {% for q in session.generated_questions.hr_questions %}
+                            <li class="mb-4 lh-lg">
+                                {{ q }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4 p-md-5">
+
+                    <h3 class="fw-bold mb-4">
+                        Technical Questions
+                    </h3>
+
+                    <ol class="ps-3 mb-0">
+                        {% for q in session.generated_questions.technical_questions %}
+                            <li class="mb-4 lh-lg">
+                                {{ q }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Row 2 -->
+    <div class="row">
+
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <h3 class="fw-bold mb-4">
+                        Coding Questions
+                    </h3>
+
+                    <ol class="ps-3 mb-0">
+                        {% for q in session.generated_questions.coding_questions %}
+                            <li class="mb-4 lh-lg">
+                                {{ q }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
