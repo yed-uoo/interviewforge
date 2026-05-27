@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('resume/', include('resume_analyzer.urls')),
+    path('interviews/', include('interviews.urls')),
 ]
 
 if settings.DEBUG:

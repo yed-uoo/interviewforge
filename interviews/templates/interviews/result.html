@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mx-auto" style="max-width: 1100px;">
+
+    <div class="mb-4">
+        <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+            Interview Questions Ready
+        </span>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+        <div>
+            <h1 class="fw-bold mb-2">
+                AI Interview Question Set
+            </h1>
+
+            <p class="text-secondary fs-5 mb-0">
+                Role: <strong>{{ role }}</strong>
+                |
+                Experience: <strong>{{ experience_level }}</strong>
+            </p>
+        </div>
+
+        <a
+            href="{% url 'generate_interview' %}"
+            class="btn btn-outline-primary rounded-3 px-4"
+        >
+            Generate New Set
+        </a>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- HR QUESTIONS -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4">
+                        HR Questions
+                    </h3>
+
+                    <ol class="ps-3">
+                        {% for question in questions.hr_questions %}
+                            <li class="mb-3">
+                                {{ question }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- TECHNICAL QUESTIONS -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4">
+                        Technical Questions
+                    </h3>
+
+                    <ol class="ps-3">
+                        {% for question in questions.technical_questions %}
+                            <li class="mb-3">
+                                {{ question }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- CODING QUESTIONS -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4">
+                        Coding Questions
+                    </h3>
+
+                    <ol class="ps-3">
+                        {% for question in questions.coding_questions %}
+                            <li class="mb-3">
+                                {{ question }}
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

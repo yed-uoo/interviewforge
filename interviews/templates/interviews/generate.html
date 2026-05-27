@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mx-auto" style="max-width: 900px;">
+
+    <div class="mb-4">
+        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
+            AI Interview Generator
+        </span>
+    </div>
+
+    <h1 class="fw-bold mb-3">
+        Generate Personalized Interview Questions
+    </h1>
+
+    <p class="text-secondary fs-5 mb-4">
+        Generate HR, technical, and coding interview questions tailored
+        to your role, experience, and optionally your actual resume.
+    </p>
+
+    {% if error %}
+        <div class="alert alert-danger rounded-3 mb-4">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 p-md-5">
+
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Role -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Target Role
+                    </label>
+                    {{ form.role }}
+                </div>
+
+                <!-- Experience -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        Experience Level
+                    </label>
+                    {{ form.experience_level }}
+                </div>
+
+                <!-- JD -->
+                <div class="mb-5">
+                    <label class="form-label fw-semibold">
+                        Job Description (Optional)
+                    </label>
+                    {{ form.job_description }}
+
+                    <div class="form-text">
+                        Paste the job description for closer role alignment.
+                    </div>
+                </div>
+
+                <!-- Resume Personalization -->
+                <div class="border rounded-4 p-4 bg-light mb-5">
+                    <h4 class="fw-bold mb-3">
+                        Resume Personalization (Recommended)
+                    </h4>
+
+                    <p class="text-secondary mb-4">
+                        Upload a resume or reuse an existing analyzed resume
+                        to generate highly personalized interview questions
+                        based on your actual projects, skills, and experience.
+                    </p>
+
+                    {% if form.existing_resume.field.queryset %}
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                Use Existing Analyzed Resume
+                            </label>
+                            {{ form.existing_resume }}
+
+                            <div class="form-text">
+                                Faster personalized generation using your saved resume history.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="text-center text-secondary fw-semibold my-3">
+                        OR
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Upload New Resume (PDF)
+                        </label>
+                        {{ form.resume_file }}
+
+                        <div class="form-text">
+                            Only valid professional resume PDFs are accepted.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <button
+                    type="submit"
+                    class="btn btn-primary btn-lg px-4 rounded-3"
+                >
+                    Generate Interview Questions
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
