@@ -1,5 +1,4 @@
 import os
-
 from resume_analyzer.models import Resume
 from resume_analyzer.utils import extract_text_from_pdf
 from resume_analyzer.ai_analyzer import validate_resume_document
