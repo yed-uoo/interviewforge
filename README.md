@@ -84,25 +84,25 @@ User → Django Views → Validation → Resume Parsing → Prompt Engineering �
 
 ### Clone Repository
 
-bash git clone https://github.com/yourusername/interviewforge.git cd interviewforge 
+git clone https://github.com/yourusername/interviewforge.git cd interviewforge 
 
 ### Create Virtual Environment
 
-bash python -m venv venv 
+python -m venv venv 
 
 ### Activate Environment
 
 Windows:
 
-bash venv\Scripts\activate 
+venv\Scripts\activate 
 
 Linux/macOS:
 
-bash source venv/bin/activate 
+source venv/bin/activate 
 
 ### Install Dependencies
 
-bash pip install -r requirements.txt 
+pip install -r requirements.txt 
 
 ### Configure Environment Variables
 
@@ -112,15 +112,15 @@ env GROQ_API_KEY=your_groq_api_key
 
 ### Apply Migrations
 
-bash python manage.py makemigrations python manage.py migrate 
+python manage.py makemigrations python manage.py migrate 
 
 ### Run Server
 
-bash python manage.py runserver 
+python manage.py runserver 
 
 Visit:
 
-text http://127.0.0.1:8000 
+http://127.0.0.1:8000 
 
 ## Future Enhancements
 
