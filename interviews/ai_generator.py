@@ -47,6 +47,7 @@ def sanitize_inputs(
 
     valid_levels = [
         "fresher",
+        "junior",
         "mid",
         "senior"
     ]
@@ -133,6 +134,8 @@ STRICT RULES:
 4. Coding questions must match experience level:
 
    - fresher → arrays, strings, hashmaps, SQL basics, API logic
+
+   - junior → practical CRUD, APIs, authentication basics, debugging, ORM usage, deployment basics
 
    - mid → API design, debugging, optimization, DB design
 

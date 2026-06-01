@@ -1,8 +1,7 @@
 import os
-
 from resume_analyzer.models import Resume
 from resume_analyzer.utils import extract_text_from_pdf
-from resume_analyzer.ai_analyzer import validate_resume_document
+from resume_analyzer.ai_analyzer import validate_resume_document,analyze_resume
 
 
 def get_resume_context(
@@ -59,10 +58,14 @@ def get_resume_context(
                     "Only valid professional resume/CV PDFs are allowed."
                 )
 
+            analysis = analyze_resume(extracted_text)
+
             resume = Resume.objects.create(
                 user=user,
                 file=uploaded_file,
-                extracted_text=extracted_text
+                extracted_text=extracted_text,
+                ats_score=analysis.get("ats_score", 0),
+                analysis_data=analysis
             )
 
             return {
