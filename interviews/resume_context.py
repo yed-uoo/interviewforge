@@ -1,7 +1,11 @@
 import os
+import logging
 from resume_analyzer.models import Resume
-from resume_analyzer.utils import extract_text_from_pdf
+from resume_analyzer.utils import extract_text_from_pdf, compute_content_hash
 from resume_analyzer.ai_analyzer import validate_resume_document,analyze_resume
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_resume_context(
@@ -58,14 +62,42 @@ def get_resume_context(
                     "Only valid professional resume/CV PDFs are allowed."
                 )
 
-            analysis = analyze_resume(extracted_text)
+            content_hash = compute_content_hash(extracted_text)
+            cached_resume = Resume.objects.filter(
+                content_hash=content_hash,
+                ats_score__gt=0
+            ).exclude(
+                analysis_data={}
+            ).order_by('-uploaded_at').first()
+
+            if cached_resume:
+                analysis = cached_resume.analysis_data
+                ats_score = cached_resume.ats_score
+                logger.info(
+                    "interview_resume_cache_hit",
+                    extra={
+                        "user_id": user.id,
+                        "content_hash": content_hash
+                    }
+                )
+            else:
+                analysis = analyze_resume(extracted_text)
+                ats_score = analysis.get("ats_score", 0)
+                logger.info(
+                    "interview_resume_cache_miss",
+                    extra={
+                        "user_id": user.id,
+                        "content_hash": content_hash
+                    }
+                )
 
             resume = Resume.objects.create(
                 user=user,
                 file=uploaded_file,
                 extracted_text=extracted_text,
-                ats_score=analysis.get("ats_score", 0),
-                analysis_data=analysis
+                ats_score=ats_score,
+                analysis_data=analysis,
+                content_hash=content_hash
             )
 
             return {
