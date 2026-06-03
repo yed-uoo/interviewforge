@@ -26,6 +26,13 @@ class Resume(models.Model):
         blank=True
     )
 
+    content_hash = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+
     uploaded_at = models.DateTimeField(
         auto_now_add=True
     )
