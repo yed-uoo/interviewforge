@@ -1,3 +1,5 @@
+# pyrefly: ignore [missing-import]
+from django.conf import settings
 from django.db import models
 
 
@@ -82,3 +84,126 @@ class Question(models.Model):
 
     def __str__(self):
         return f"[{self.get_difficulty_display()}] {self.question[:60]}"
+
+
+class MCQTest(models.Model):
+    class Status(models.TextChoices):
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mcq_tests",
+        verbose_name="User",
+    )
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name="mcq_tests",
+        verbose_name="Topic",
+    )
+    total_questions = models.PositiveIntegerField(verbose_name="Total Questions")
+    score = models.PositiveIntegerField(default=0, verbose_name="Score")
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Percentage",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.IN_PROGRESS,
+        verbose_name="Status",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="Submitted At")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "MCQ Test"
+        verbose_name_plural = "MCQ Tests"
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return f"Test {self.id} - {self.user.username} - {self.topic.name} ({self.get_status_display()})"
+
+
+class MCQTestQuestion(models.Model):
+    test = models.ForeignKey(
+        MCQTest,
+        on_delete=models.CASCADE,
+        related_name="test_questions",
+        verbose_name="MCQ Test",
+    )
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name="mcq_test_questions",
+        verbose_name="Question",
+    )
+    order = models.PositiveIntegerField(verbose_name="Order")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["test", "order"],
+                name="unique_test_question_order"
+            ),
+            models.UniqueConstraint(
+                fields=["test", "question"],
+                name="unique_test_question"
+            )
+        ]
+        ordering = ["test", "order"]
+        verbose_name = "MCQ Test Question"
+        verbose_name_plural = "MCQ Test Questions"
+
+    def __str__(self):
+        return f"Test {self.test_id} - Q{self.order}: {self.question.question[:40]}"
+
+
+class MCQAnswer(models.Model):
+    class Options(models.TextChoices):
+        A = "A", "Option A"
+        B = "B", "Option B"
+        C = "C", "Option C"
+        D = "D", "Option D"
+        X = "X", "I Don't Know"
+
+    test = models.ForeignKey(
+        MCQTest,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        verbose_name="MCQ Test",
+    )
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name="mcq_answers",
+        verbose_name="Question",
+    )
+    selected_option = models.CharField(
+        max_length=1,
+        choices=Options.choices,
+        verbose_name="Selected Option",
+    )
+    is_correct = models.BooleanField(db_index=True, verbose_name="Is Correct")
+    answered_at = models.DateTimeField(auto_now_add=True, verbose_name="Answered At")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["test", "question"],
+                name="unique_test_question_answer"
+            )
+        ]
+        verbose_name = "MCQ Answer"
+        verbose_name_plural = "MCQ Answers"
+
+    def __str__(self):
+        return f"Test {self.test_id} - Q: {self.question_id} - Ans: {self.selected_option}"

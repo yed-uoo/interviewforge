@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row align-items-center g-4 mb-5">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill text-bg-primary px-3 py-2">
+                MCQ Practice
+            </span>
+            <span class="badge rounded-pill text-bg-light text-secondary border">
+                Test History
+            </span>
+        </div>
+
+        <h1 class="display-6 fw-semibold mb-3">
+            MCQ Test History
+        </h1>
+
+        <p class="lead text-secondary mb-0 col-xl-10">
+            A full record of all your MCQ practice sessions. Resume in-progress
+            sessions or review your completed results below.
+        </p>
+    </div>
+
+    <div class="col-lg-4 d-flex justify-content-lg-end align-items-center">
+        <a href="{% url 'mcq_setup' %}" class="btn btn-success px-4 fw-semibold">
+            + New Session
+        </a>
+    </div>
+</div>
+
+<!-- Stats Row -->
+{% if past_tests %}
+<div class="row g-3 mb-5">
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-primary mb-1">{{ total_count }}</div>
+            <div class="text-secondary small">Total Attempts</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-success mb-1">{{ completed_count }}</div>
+            <div class="text-secondary small">Completed</div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-warning mb-1">{{ in_progress_count }}</div>
+            <div class="text-secondary small">In Progress</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- History Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4 p-md-5">
+        {% if past_tests %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>#</th>
+                        <th>Topic</th>
+                        <th>Date</th>
+                        <th>Questions</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for test in past_tests %}
+                    <tr>
+                        <td class="text-secondary small">{{ forloop.counter }}</td>
+                        <td>
+                            <span class="fw-semibold text-dark">{{ test.topic.name }}</span>
+                        </td>
+                        <td>
+                            <span class="text-secondary small">{{ test.created_at|date:"M d, Y" }}</span>
+                            <div class="text-secondary" style="font-size: 0.75rem;">{{ test.created_at|date:"H:i" }}</div>
+                        </td>
+                        <td>
+                            <span class="text-secondary">{{ test.total_questions }}</span>
+                        </td>
+                        <td>
+                            {% if test.status == 'COMPLETED' %}
+                            <span class="fw-semibold text-dark">{{ test.score }}/{{ test.total_questions }}</span>
+                            <div>
+                                <span class="badge bg-light text-secondary border">{{ test.percentage }}%</span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if test.status == 'COMPLETED' %}
+                            <span class="badge text-bg-success">Completed</span>
+                            {% else %}
+                            <span class="badge text-bg-warning">In Progress</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if test.status == 'COMPLETED' %}
+                            <a href="{% url 'mcq_results' test.id %}" class="btn btn-outline-primary btn-sm px-3">
+                                View Results
+                            </a>
+                            {% else %}
+                            <a href="{% url 'mcq_test_session' test.id %}" class="btn btn-primary btn-sm px-3">
+                                Resume Session
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <p class="text-secondary mb-3">You haven't taken any practice sessions yet.</p>
+            <a href="{% url 'mcq_setup' %}" class="btn btn-success px-4 fw-semibold">
+                Start Your First Session
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

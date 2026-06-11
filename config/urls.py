@@ -8,6 +8,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('resume/', include('resume_analyzer.urls')),
     path('interviews/', include('interviews.urls')),
+    path('mcq/', include('mcq_engine.urls')),
 ]
 
 if settings.DEBUG:

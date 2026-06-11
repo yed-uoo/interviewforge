@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .option-label {
+        transition: all 0.2s ease;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+        background-color: #ffffff;
+    }
+    .option-label:hover {
+        background-color: #f8fafc;
+        border-color: rgba(59, 130, 246, 0.4) !important;
+    }
+    .option-label:has(.option-input:checked) {
+        border-color: #3b82f6 !important;
+        background-color: rgba(59, 130, 246, 0.05) !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    .sticky-progress {
+        position: sticky;
+        top: 80px;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+</style>
+
+<!-- Sticky header for progress -->
+<div class="card sticky-progress shadow-sm rounded-3 mb-4">
+    <div class="card-body py-3 px-4 d-flex justify-content-between align-items-center">
+        <div>
+            <span class="text-secondary small text-uppercase fw-semibold">MCQ Assessment Session</span>
+            <h2 class="h5 fw-bold mb-0 text-dark">{{ test.topic.name }}</h2>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge text-bg-warning px-3 py-2 fw-semibold" id="answers-counter">
+                0 / {{ test.total_questions }} Answered
+            </span>
+            <a href="{% url 'mcq_setup' %}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancel test session? Your progress will not be saved.');">
+                Quit
+            </a>
+        </div>
+    </div>
+</div>
+
+<form id="assessment-form" method="post" action="{% url 'mcq_test_session' test.id %}" onsubmit="return confirmSubmit();">
+    {% csrf_token %}
+    
+    <div class="d-flex flex-column gap-4">
+        {% for tq in test_questions %}
+            <div class="card border-0 shadow-sm rounded-4 question-card" data-q-id="{{ tq.question.id }}">
+                <div class="card-body p-4 p-md-5">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
+                        <span class="badge bg-light text-primary border px-3 py-2 fw-semibold">
+                            Question {{ tq.order }} of {{ test.total_questions }}
+                        </span>
+                        
+                        <span class="badge bg-light text-secondary border px-2 py-1 small text-capitalize">
+                            Difficulty: {{ tq.question.get_difficulty_display }}
+                        </span>
+                    </div>
+
+                    <p class="fs-5 fw-medium text-dark mb-4">
+                        {{ tq.question.question }}
+                    </p>
+
+                    <div class="d-flex flex-column gap-3">
+                        <!-- Option A -->
+                        <label class="list-group-item d-flex align-items-center gap-3 border rounded-3 p-3 option-label cursor-pointer">
+                            <input class="form-check-input option-input mt-0" type="radio" name="question_{{ tq.question.id }}" value="A" onchange="updateCounter()">
+                            <span><strong>A.</strong> {{ tq.question.option_a }}</span>
+                        </label>
+                        
+                        <!-- Option B -->
+                        <label class="list-group-item d-flex align-items-center gap-3 border rounded-3 p-3 option-label cursor-pointer">
+                            <input class="form-check-input option-input mt-0" type="radio" name="question_{{ tq.question.id }}" value="B" onchange="updateCounter()">
+                            <span><strong>B.</strong> {{ tq.question.option_b }}</span>
+                        </label>
+                        
+                        <!-- Option C -->
+                        <label class="list-group-item d-flex align-items-center gap-3 border rounded-3 p-3 option-label cursor-pointer">
+                            <input class="form-check-input option-input mt-0" type="radio" name="question_{{ tq.question.id }}" value="C" onchange="updateCounter()">
+                            <span><strong>C.</strong> {{ tq.question.option_c }}</span>
+                        </label>
+                        
+                        <!-- Option D -->
+                        <label class="list-group-item d-flex align-items-center gap-3 border rounded-3 p-3 option-label cursor-pointer">
+                            <input class="form-check-input option-input mt-0" type="radio" name="question_{{ tq.question.id }}" value="D" onchange="updateCounter()">
+                            <span><strong>D.</strong> {{ tq.question.option_d }}</span>
+                        </label>
+                        
+                        <!-- Option X (I Don't Know) -->
+                        <label class="list-group-item d-flex align-items-center gap-3 border rounded-3 p-3 option-label cursor-pointer">
+                            <input class="form-check-input option-input mt-0" type="radio" name="question_{{ tq.question.id }}" value="X" onchange="updateCounter()">
+                            <span class="text-secondary"><strong>X.</strong> I Don't Know / Skip</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-5 border-top pt-4">
+        <span class="text-secondary small">Review all answers carefully before submitting.</span>
+        <button type="submit" class="btn btn-success btn-lg px-5 py-3 fw-bold">
+            Submit Assessment
+        </button>
+    </div>
+</form>
+
+<script>
+function updateCounter() {
+    const totalQuestions = {{ test.total_questions }};
+    const form = document.getElementById('assessment-form');
+    const checkedRadios = form.querySelectorAll('input[type="radio"]:checked');
+    const answersCounter = document.getElementById('answers-counter');
+    
+    answersCounter.textContent = `${checkedRadios.length} / ${totalQuestions} Answered`;
+    
+    if (checkedRadios.length === totalQuestions) {
+        answersCounter.className = "badge text-bg-success px-3 py-2 fw-semibold";
+    } else {
+        answersCounter.className = "badge text-bg-warning px-3 py-2 fw-semibold";
+    }
+}
+
+function confirmSubmit() {
+    const totalQuestions = {{ test.total_questions }};
+    const form = document.getElementById('assessment-form');
+    const checkedRadios = form.querySelectorAll('input[type="radio"]:checked');
+    
+    if (checkedRadios.length < totalQuestions) {
+        const remaining = totalQuestions - checkedRadios.length;
+        return confirm(`You have ${remaining} unanswered question(s). Unanswered questions will be automatically marked as "I Don't Know (X)" and scored incorrect. Do you want to submit anyway?`);
+    }
+    
+    return confirm("Are you sure you want to submit your assessment and view results?");
+}
+
+// Initial count check on load (handles page reload state browser inputs retain)
+document.addEventListener('DOMContentLoaded', updateCounter);
+</script>
+{% endblock %}

@@ -1,6 +1,7 @@
 import json
 import os
 
+# pyrefly: ignore [missing-import]
 from django.core.management.base import BaseCommand, CommandError
 
 from mcq_engine.models import Topic, Subtopic, Question

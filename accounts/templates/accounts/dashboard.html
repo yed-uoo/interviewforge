@@ -55,7 +55,7 @@
                     </span>
 
                     <span class="fw-semibold">
-                        2 live, 2 upcoming
+                        3 live, 1 upcoming
                     </span>
                 </div>
             </div>
@@ -183,12 +183,12 @@
 
     <!-- MCQ Tests -->
     <div class="col-md-6 col-xl-3">
-        <div class="card h-100 shadow-sm border-0 bg-light">
-            <div class="card-body p-4 d-flex flex-column opacity-75">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body p-4 d-flex flex-column">
                 <div class="d-flex align-items-start justify-content-between mb-3">
                     <div>
-                        <span class="badge text-bg-secondary mb-3">
-                            Coming Soon
+                        <span class="badge text-bg-success mb-3">
+                            Live
                         </span>
                         <h5 class="card-title mb-2">
                             MCQ Tests
@@ -203,9 +203,13 @@
                 </p>
 
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-secondary" disabled>
-                        Coming Soon
-                    </button>
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-primary">
+                        Try Now
+                    </a>
+
+                    <a href="{% url 'mcq_history' %}" class="btn btn-outline-secondary">
+                        View History
+                    </a>
 
                     <small class="text-secondary">
                         Ideal for rapid revision before interviews.
