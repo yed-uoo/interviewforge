@@ -119,9 +119,9 @@
         </div>
         {% else %}
         <div class="text-center py-5">
-            <p class="text-secondary mb-3">You haven't taken any practice sessions yet.</p>
-            <a href="{% url 'mcq_setup' %}" class="btn btn-success px-4 fw-semibold">
-                Start Your First Session
+            <p class="text-secondary mb-4 fs-6">No assessments completed yet.</p>
+            <a href="{% url 'mcq_setup' %}" class="btn btn-success btn-lg px-5 fw-semibold">
+                Start Your First Assessment
             </a>
         </div>
         {% endif %}

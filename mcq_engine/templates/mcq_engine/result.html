@@ -10,165 +10,317 @@
     }
     .option-correct {
         border-color: #10b981 !important;
-        background-color: rgba(16, 185, 129, 0.05) !important;
+        background-color: rgba(16, 185, 129, 0.06) !important;
         color: #065f46 !important;
     }
     .option-incorrect {
         border-color: #ef4444 !important;
-        background-color: rgba(239, 68, 68, 0.05) !important;
+        background-color: rgba(239, 68, 68, 0.06) !important;
         color: #991b1b !important;
     }
     .result-badge {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.8rem;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.75rem;
         border-radius: 2rem;
+        font-weight: 600;
     }
     .explanation-box {
         border-left: 4px solid #3b82f6;
-        background-color: #f0fdf4;
+        background-color: #f0f9ff;
     }
+
+    /* ── Summary stat cards ── */
+    .summary-stat {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 0.75rem;
+    }
+    .summary-stat-icon {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 0.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .summary-stat-icon.green  { background: rgba(16, 185, 129, 0.12); }
+    .summary-stat-icon.red    { background: rgba(239, 68, 68, 0.10); }
+    .summary-stat-icon.yellow { background: rgba(245, 158, 11, 0.12); }
+    .summary-stat-icon.blue   { background: rgba(59, 130, 246, 0.10); }
+    .summary-stat-body { flex: 1; }
+    .summary-stat-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    .summary-stat-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1;
+    }
+    .summary-stat-value.green  { color: #059669; }
+    .summary-stat-value.red    { color: #dc2626; }
+    .summary-stat-value.yellow { color: #d97706; }
+    .summary-stat-value.blue   { color: #2563eb; }
 </style>
 
-<!-- Results Header -->
-<div class="row g-4 mb-5">
+<!-- ── Results Header ── -->
+<div class="row g-4 mb-4">
     <div class="col-12">
         {% if test.percentage >= 70.0 %}
-            <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #10b981, #059669);">
-                <div class="card-body p-4 p-md-5 text-center">
-                    <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-success fw-semibold">Passed</span>
-                    <h1 class="display-5 fw-bold mb-2">Excellent Revision!</h1>
-                    <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
-                    </div>
+        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <div class="card-body p-4 p-md-5 text-center">
+                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-success fw-semibold">Passed</span>
+                <h1 class="display-5 fw-bold mb-2">Excellent Revision!</h1>
+                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
+        </div>
         {% elif test.percentage >= 40.0 %}
-            <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-                <div class="card-body p-4 p-md-5 text-center">
-                    <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-warning fw-semibold">Good Effort</span>
-                    <h1 class="display-5 fw-bold mb-2">Well Done!</h1>
-                    <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Practice Again</a>
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
-                    </div>
+        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <div class="card-body p-4 p-md-5 text-center">
+                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-warning fw-semibold">Good Effort</span>
+                <h1 class="display-5 fw-bold mb-2">Well Done!</h1>
+                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Practice Again</a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
+        </div>
         {% else %}
-            <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
-                <div class="card-body p-4 p-md-5 text-center">
-                    <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-danger fw-semibold">Keep Practicing</span>
-                    <h1 class="display-5 fw-bold mb-2">Don't Give Up!</h1>
-                    <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Try Again</a>
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
-                    </div>
+        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+            <div class="card-body p-4 p-md-5 text-center">
+                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-danger fw-semibold">Keep Practicing</span>
+                <h1 class="display-5 fw-bold mb-2">Don't Give Up!</h1>
+                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Try Again</a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
+        </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Detailed Question-by-Question Review -->
+<!-- ── Summary stats card ── -->
+{% with idk_count=0 wrong_count=0 %}
+{% comment %}Compute counts in template using questions_data{% endcomment %}
+<div class="card border-0 shadow-sm mb-5">
+    <div class="card-body p-4 p-md-5">
+        <h2 class="h5 fw-bold mb-4 text-dark">Performance Summary</h2>
+        <div class="row g-3">
+
+            <!-- Correct -->
+            <div class="col-sm-6 col-xl-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-icon green">✓</div>
+                    <div class="summary-stat-body">
+                        <div class="summary-stat-label">Correct</div>
+                        <div class="summary-stat-value green">
+                            {% with c=0 %}
+                            {{ test.score }}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wrong -->
+            <div class="col-sm-6 col-xl-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-icon red">✗</div>
+                    <div class="summary-stat-body">
+                        <div class="summary-stat-label">Wrong</div>
+                        <div class="summary-stat-value red" id="stat-wrong">
+                            {% with wrong=0 %}
+                            {% for item in questions_data %}{% if not item.is_correct and item.selected_option != 'X' %}{% with wrong=wrong|add:1 %}{% endwith %}{% endif %}{% endfor %}
+                            {{ questions_data|length|add:"-1"|add:"1" }}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- I Don't Know -->
+            <div class="col-sm-6 col-xl-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-icon yellow">?</div>
+                    <div class="summary-stat-body">
+                        <div class="summary-stat-label">I Don't Know</div>
+                        <div class="summary-stat-value yellow" id="stat-idk-val">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score -->
+            <div class="col-sm-6 col-xl-3">
+                <div class="summary-stat">
+                    <div class="summary-stat-icon blue">%</div>
+                    <div class="summary-stat-body">
+                        <div class="summary-stat-label">Score</div>
+                        <div class="summary-stat-value blue">{{ test.score }}&thinsp;/&thinsp;{{ test.total_questions }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Percentage row -->
+        <div class="row g-3 mt-0">
+            <div class="col-12">
+                <div class="summary-stat">
+                    <div class="summary-stat-icon blue" style="width:auto;padding:0 0.5rem;border-radius:0.5rem;font-size:0.85rem;font-weight:700;color:#2563eb;">PCT</div>
+                    <div class="summary-stat-body d-flex align-items-center gap-3">
+                        <div>
+                            <div class="summary-stat-label">Percentage</div>
+                            <div class="summary-stat-value blue">{{ test.percentage }}%</div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="progress" style="height:8px;border-radius:4px;">
+                                <div class="progress-bar
+                                    {% if test.percentage >= 70 %}bg-success{% elif test.percentage >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                                    role="progressbar"
+                                    style="width: {{ test.percentage }}%"
+                                    aria-valuenow="{{ test.percentage }}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endwith %}
+
+<!-- Hidden data for JS to compute wrong/idk accurately -->
+<script id="result-data" type="application/json">
+[{% for item in questions_data %}{"correct":{{ item.is_correct|yesno:"true,false" }},"option":"{{ item.selected_option }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+</script>
+
+<!-- ── Detailed Revision Breakdown ── -->
 <h2 class="h4 fw-bold mb-4 text-dark">Revision Breakdown</h2>
 
 <div class="d-flex flex-column gap-4">
     {% for item in questions_data %}
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4 p-md-5">
-                <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-light text-secondary border px-3 py-2 fw-semibold">
-                            Question {{ item.order }}
-                        </span>
-                        
-                        {% if item.is_correct %}
-                            <span class="badge text-bg-success result-badge">✓ Correct</span>
-                        {% elif item.selected_option == 'X' %}
-                            <span class="badge text-bg-secondary result-badge">⚠ Skipped (I Don't Know)</span>
-                        {% else %}
-                            <span class="badge text-bg-danger result-badge">✗ Incorrect</span>
-                        {% endif %}
-                    </div>
-                    
-                    <span class="badge bg-light text-secondary border px-2 py-1 small text-capitalize">
-                        Difficulty: {{ item.question.get_difficulty_display }}
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4 p-md-5">
+
+            <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge bg-light text-secondary border px-3 py-2 fw-semibold">
+                        Question {{ item.order }}
                     </span>
-                </div>
-
-                <p class="fs-5 fw-medium text-dark mb-4">
-                    {{ item.question.question }}
-                </p>
-
-                <div class="d-flex flex-column gap-3 mb-4">
-                    <!-- Option A -->
-                    <div class="option-item d-flex align-items-center justify-content-between 
-                        {% if item.question.correct_option == 'A' %}option-correct{% elif item.selected_option == 'A' and not item.is_correct %}option-incorrect{% endif %}">
-                        <span><strong>A.</strong> {{ item.question.option_a }}</span>
-                        {% if item.question.correct_option == 'A' %}
-                            <span class="small fw-semibold text-success">✓ Correct Answer</span>
-                        {% elif item.selected_option == 'A' %}
-                            <span class="small fw-semibold text-danger">✗ Your Choice</span>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Option B -->
-                    <div class="option-item d-flex align-items-center justify-content-between 
-                        {% if item.question.correct_option == 'B' %}option-correct{% elif item.selected_option == 'B' and not item.is_correct %}option-incorrect{% endif %}">
-                        <span><strong>B.</strong> {{ item.question.option_b }}</span>
-                        {% if item.question.correct_option == 'B' %}
-                            <span class="small fw-semibold text-success">✓ Correct Answer</span>
-                        {% elif item.selected_option == 'B' %}
-                            <span class="small fw-semibold text-danger">✗ Your Choice</span>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Option C -->
-                    <div class="option-item d-flex align-items-center justify-content-between 
-                        {% if item.question.correct_option == 'C' %}option-correct{% elif item.selected_option == 'C' and not item.is_correct %}option-incorrect{% endif %}">
-                        <span><strong>C.</strong> {{ item.question.option_c }}</span>
-                        {% if item.question.correct_option == 'C' %}
-                            <span class="small fw-semibold text-success">✓ Correct Answer</span>
-                        {% elif item.selected_option == 'C' %}
-                            <span class="small fw-semibold text-danger">✗ Your Choice</span>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Option D -->
-                    <div class="option-item d-flex align-items-center justify-content-between 
-                        {% if item.question.correct_option == 'D' %}option-correct{% elif item.selected_option == 'D' and not item.is_correct %}option-incorrect{% endif %}">
-                        <span><strong>D.</strong> {{ item.question.option_d }}</span>
-                        {% if item.question.correct_option == 'D' %}
-                            <span class="small fw-semibold text-success">✓ Correct Answer</span>
-                        {% elif item.selected_option == 'D' %}
-                            <span class="small fw-semibold text-danger">✗ Your Choice</span>
-                        {% endif %}
-                    </div>
-                    
-                    {% if item.selected_option == 'X' %}
-                        <div class="p-2 bg-light rounded-3 text-secondary small d-flex align-items-center gap-2 border">
-                            <span class="fw-bold">⚠</span>
-                            <span>You skipped this question by selecting <strong>X (I Don't Know / Skip)</strong>.</span>
-                        </div>
+                    {% if item.is_correct %}
+                    <span class="badge text-bg-success result-badge">✓ Correct</span>
+                    {% elif item.selected_option == 'X' %}
+                    <span class="badge text-bg-warning result-badge">? I Don't Know</span>
+                    {% else %}
+                    <span class="badge text-bg-danger result-badge">✗ Incorrect</span>
                     {% endif %}
                 </div>
+                <span class="badge bg-light text-secondary border px-2 py-1 small text-capitalize">
+                    {{ item.question.get_difficulty_display }}
+                </span>
+            </div>
 
-                {% if item.question.explanation %}
-                    <div class="p-4 rounded-3 explanation-box">
-                        <h5 class="h6 fw-bold text-dark mb-2">Answer Rationale</h5>
-                        <p class="text-secondary small mb-0">{{ item.question.explanation }}</p>
-                    </div>
+            <p class="fs-5 fw-medium text-dark mb-4">{{ item.question.question }}</p>
+
+            <div class="d-flex flex-column gap-3 mb-4">
+                <!-- A -->
+                <div class="option-item d-flex align-items-center justify-content-between
+                    {% if item.question.correct_option == 'A' %}option-correct{% elif item.selected_option == 'A' and not item.is_correct %}option-incorrect{% endif %}">
+                    <span><strong>A.</strong> {{ item.question.option_a }}</span>
+                    {% if item.question.correct_option == 'A' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
+                    {% elif item.selected_option == 'A' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                </div>
+                <!-- B -->
+                <div class="option-item d-flex align-items-center justify-content-between
+                    {% if item.question.correct_option == 'B' %}option-correct{% elif item.selected_option == 'B' and not item.is_correct %}option-incorrect{% endif %}">
+                    <span><strong>B.</strong> {{ item.question.option_b }}</span>
+                    {% if item.question.correct_option == 'B' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
+                    {% elif item.selected_option == 'B' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                </div>
+                <!-- C -->
+                <div class="option-item d-flex align-items-center justify-content-between
+                    {% if item.question.correct_option == 'C' %}option-correct{% elif item.selected_option == 'C' and not item.is_correct %}option-incorrect{% endif %}">
+                    <span><strong>C.</strong> {{ item.question.option_c }}</span>
+                    {% if item.question.correct_option == 'C' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
+                    {% elif item.selected_option == 'C' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                </div>
+                <!-- D -->
+                <div class="option-item d-flex align-items-center justify-content-between
+                    {% if item.question.correct_option == 'D' %}option-correct{% elif item.selected_option == 'D' and not item.is_correct %}option-incorrect{% endif %}">
+                    <span><strong>D.</strong> {{ item.question.option_d }}</span>
+                    {% if item.question.correct_option == 'D' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
+                    {% elif item.selected_option == 'D' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                </div>
+
+                {% if item.selected_option == 'X' %}
+                <div class="p-2 bg-light rounded-3 text-secondary small d-flex align-items-center gap-2 border">
+                    <span class="fw-bold">?</span>
+                    <span>You selected <strong>X — I Don't Know</strong> for this question.</span>
+                </div>
                 {% endif %}
             </div>
+
+            {% if item.question.explanation %}
+            <div class="p-4 rounded-3 explanation-box">
+                <h5 class="h6 fw-bold text-dark mb-2">Answer Rationale</h5>
+                <p class="text-secondary small mb-0">{{ item.question.explanation }}</p>
+            </div>
+            {% endif %}
+
         </div>
+    </div>
     {% endfor %}
 </div>
 
-<div class="d-flex justify-content-center gap-3 mt-5">
+<div class="d-flex justify-content-center gap-3 mt-5 flex-wrap">
     <a href="{% url 'mcq_setup' %}" class="btn btn-primary btn-lg px-4">New Practice Session</a>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Back to Dashboard</a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+    var raw = document.getElementById('result-data');
+    if (!raw) return;
+    try {
+        var data = JSON.parse(raw.textContent);
+        var wrong = 0, idk = 0;
+        data.forEach(function (d) {
+            if (!d.correct && d.option === 'X') idk++;
+            else if (!d.correct) wrong++;
+        });
+        var wrongEl = document.getElementById('stat-wrong');
+        var idkEl   = document.getElementById('stat-idk-val');
+        if (wrongEl) wrongEl.textContent = wrong;
+        if (idkEl)   idkEl.textContent   = idk;
+    } catch (e) {
+        console.warn('[MCQ Results] Could not parse result data:', e);
+    }
+})();
+</script>
 {% endblock %}
