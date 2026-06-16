@@ -66,10 +66,13 @@
                     </div>
 
                     <div class="d-grid mt-5">
-                        <button type="submit" class="btn btn-success btn-lg py-3 fw-semibold">
+                        <button type="button" id="open-confirm-btn" class="btn btn-success btn-lg py-3 fw-semibold">
                             Start Practice Session
                         </button>
                     </div>
+
+                    <!-- Hidden real submit — triggered by JS only after confirmation -->
+                    <button type="submit" id="real-submit-btn" style="display:none;" aria-hidden="true"></button>
                 </form>
 
                 <div class="mt-3 text-center">
@@ -119,4 +122,415 @@
         </div>
     </div>
 </div>
+
+<!-- ============================================================
+     CONFIRMATION POPUP — pure HTML/CSS/JS, zero Bootstrap Modal
+     ============================================================ -->
+<div id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-hidden="true">
+    <div id="confirm-card">
+
+        <div id="confirm-header">
+            <h2 id="confirm-title">Ready to Begin?</h2>
+            <button id="confirm-close-x" type="button" aria-label="Close popup">&#x2715;</button>
+        </div>
+
+        <div id="confirm-body">
+            <p id="confirm-intro">Please read the following before starting:</p>
+
+            <ul id="confirm-rules">
+                <li>Attempt only the questions you genuinely know.</li>
+                <li>If you do not know the answer, select <strong>"I Don't Know (Option X)"</strong>.</li>
+                <li>Do <strong>NOT</strong> randomly guess answers.</li>
+                <li>Do <strong>NOT</strong> copy from books, websites, ChatGPT, or any external resources.</li>
+                <li>This assessment is designed to identify your strengths and weaknesses.</li>
+                <li>Honest answers allow the AI to generate personalized study recommendations.</li>
+                <li>Once the assessment starts, answer all questions before submitting.</li>
+            </ul>
+
+            <label id="confirm-checkbox-label">
+                <input type="checkbox" id="confirm-checkbox">
+                <span>I understand these instructions and will attempt the assessment honestly.</span>
+            </label>
+        </div>
+
+        <div id="confirm-footer">
+            <button id="confirm-cancel-btn" type="button">Cancel</button>
+            <button id="confirm-start-btn" type="button" disabled>Start Assessment</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* ── Overlay ── */
+    #confirm-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1080;
+        background: rgba(10, 18, 36, 0.72);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+
+        /* Hidden by default */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+    }
+
+    #confirm-overlay.is-open {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.22s ease;
+    }
+
+    /* ── Card ── */
+    #confirm-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        box-shadow: 0 24px 64px rgba(10, 18, 36, 0.22);
+        width: 100%;
+        max-width: 540px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        transform: translateY(16px) scale(0.98);
+        transition: transform 0.22s ease;
+        overflow: hidden;
+    }
+
+    #confirm-overlay.is-open #confirm-card {
+        transform: translateY(0) scale(1);
+    }
+
+    /* ── Header ── */
+    #confirm-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem 1rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        flex-shrink: 0;
+    }
+
+    #confirm-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    #confirm-close-x {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        color: #64748b;
+        line-height: 1;
+        padding: 0.25rem 0.4rem;
+        border-radius: 0.4rem;
+        transition: background 0.15s, color 0.15s;
+    }
+
+    #confirm-close-x:hover,
+    #confirm-close-x:focus-visible {
+        background: #f1f5f9;
+        color: #0f172a;
+        outline: 2px solid #3b82f6;
+        outline-offset: 1px;
+    }
+
+    /* ── Body ── */
+    #confirm-body {
+        padding: 1.25rem 1.5rem;
+        overflow-y: auto;
+        flex: 1 1 auto;
+    }
+
+    #confirm-intro {
+        font-size: 0.875rem;
+        color: #475569;
+        margin-bottom: 0.75rem;
+    }
+
+    #confirm-rules {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    #confirm-rules li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        font-size: 0.875rem;
+        color: #334155;
+        line-height: 1.5;
+    }
+
+    #confirm-rules li::before {
+        content: "•";
+        color: #3b82f6;
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+        margin-top: 0.05em;
+    }
+
+    /* ── Checkbox label ── */
+    #confirm-checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        cursor: pointer;
+        padding: 0.85rem 1rem;
+        border-radius: 0.6rem;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        transition: border-color 0.15s, background 0.15s;
+        margin-top: 0.25rem;
+    }
+
+    #confirm-checkbox-label:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    #confirm-checkbox {
+        width: 1.1rem;
+        height: 1.1rem;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+        accent-color: #3b82f6;
+        cursor: pointer;
+    }
+
+    #confirm-checkbox-label span {
+        font-size: 0.875rem;
+        color: #334155;
+        font-weight: 500;
+        line-height: 1.45;
+        user-select: none;
+    }
+
+    /* ── Footer ── */
+    #confirm-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        background: #f8fafc;
+        flex-shrink: 0;
+    }
+
+    #confirm-cancel-btn {
+        background: #ffffff;
+        border: 1.5px solid #cbd5e1;
+        color: #475569;
+        font-size: 0.9rem;
+        font-weight: 500;
+        padding: 0.55rem 1.25rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    #confirm-cancel-btn:hover,
+    #confirm-cancel-btn:focus-visible {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #1e293b;
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+    }
+
+    #confirm-start-btn {
+        background: #16a34a;
+        border: 1.5px solid #16a34a;
+        color: #ffffff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 0.55rem 1.4rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background 0.15s, opacity 0.15s;
+    }
+
+    #confirm-start-btn:disabled {
+        background: #94a3b8;
+        border-color: #94a3b8;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    #confirm-start-btn:not(:disabled):hover,
+    #confirm-start-btn:not(:disabled):focus-visible {
+        background: #15803d;
+        border-color: #15803d;
+        outline: 2px solid #16a34a;
+        outline-offset: 2px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 480px) {
+        #confirm-card {
+            border-radius: 0.75rem;
+        }
+
+        #confirm-footer {
+            flex-direction: column-reverse;
+        }
+
+        #confirm-cancel-btn,
+        #confirm-start-btn {
+            width: 100%;
+            text-align: center;
+            padding: 0.7rem 1rem;
+        }
+    }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    // ── Element refs ──────────────────────────────────────────────────────────
+    var overlay      = document.getElementById('confirm-overlay');
+    var card         = document.getElementById('confirm-card');
+    var openBtn      = document.getElementById('open-confirm-btn');
+    var closeXBtn    = document.getElementById('confirm-close-x');
+    var cancelBtn    = document.getElementById('confirm-cancel-btn');
+    var startBtn     = document.getElementById('confirm-start-btn');
+    var checkbox     = document.getElementById('confirm-checkbox');
+    var setupForm    = document.getElementById('setup-form');
+    var topicSelect  = document.getElementById('id_topic');
+
+    // Guard: if any required element is missing, fall back to normal submit.
+    if (!overlay || !openBtn || !setupForm || !topicSelect) {
+        console.warn('[MCQ Setup] Confirmation popup elements missing — falling back to direct submit.');
+        if (openBtn) openBtn.setAttribute('type', 'submit');
+        return;
+    }
+
+    // Track submission to prevent double-fire.
+    var submitted = false;
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function openPopup() {
+        // Reset state every time popup opens.
+        checkbox.checked = false;
+        startBtn.disabled = true;
+
+        overlay.classList.add('is-open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        // Move focus inside popup (close X is first focusable element).
+        closeXBtn.focus();
+    }
+
+    function closePopup() {
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+
+        // Return focus to the button that opened the popup.
+        openBtn.focus();
+    }
+
+    // ── Open: click "Start Practice Session" ─────────────────────────────────
+    openBtn.addEventListener('click', function () {
+        if (!topicSelect.value) {
+            // No topic chosen — let Django validate; skip popup.
+            topicSelect.focus();
+            topicSelect.reportValidity && topicSelect.reportValidity();
+            // Show inline visual cue via Bootstrap class.
+            topicSelect.classList.add('is-invalid');
+            topicSelect.addEventListener('change', function removeCue() {
+                topicSelect.classList.remove('is-invalid');
+                topicSelect.removeEventListener('change', removeCue);
+            });
+            return;
+        }
+        openPopup();
+    });
+
+    // ── Close: × button ───────────────────────────────────────────────────────
+    closeXBtn.addEventListener('click', closePopup);
+
+    // ── Close: Cancel button ─────────────────────────────────────────────────
+    cancelBtn.addEventListener('click', closePopup);
+
+    // ── Close: click on overlay backdrop (outside the card) ──────────────────
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closePopup();
+    });
+
+    // ── Close: ESC key ───────────────────────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+            closePopup();
+        }
+    });
+
+    // ── Checkbox enables Start Assessment button ──────────────────────────────
+    checkbox.addEventListener('change', function () {
+        startBtn.disabled = !checkbox.checked;
+    });
+
+    // ── Focus trap inside the popup ───────────────────────────────────────────
+    var FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    overlay.addEventListener('keydown', function (e) {
+        if (e.key !== 'Tab') return;
+        if (!overlay.classList.contains('is-open')) return;
+
+        var focusable = Array.from(card.querySelectorAll(FOCUSABLE));
+        if (!focusable.length) return;
+
+        var first = focusable[0];
+        var last  = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+            if (document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            }
+        } else {
+            if (document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+
+    // ── Start Assessment ─────────────────────────────────────────────────────
+    startBtn.addEventListener('click', function () {
+        if (startBtn.disabled) return;
+        if (submitted) return;   // double-click guard
+
+        submitted = true;
+
+        // Disable button visually to signal processing.
+        startBtn.disabled = true;
+        startBtn.textContent = 'Starting…';
+
+        // Close overlay cleanly before submit.
+        overlay.classList.remove('is-open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+
+        setupForm.submit();
+    });
+})();
+</script>
 {% endblock %}
