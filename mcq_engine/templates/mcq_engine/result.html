@@ -73,6 +73,161 @@
     .summary-stat-value.red    { color: #dc2626; }
     .summary-stat-value.yellow { color: #d97706; }
     .summary-stat-value.blue   { color: #2563eb; }
+
+    /* ── AI Analysis section ── */
+    .ai-section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .ai-badge-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        padding: 0.25rem 0.6rem;
+        border-radius: 2rem;
+        line-height: 1;
+    }
+    .ai-perf-card {
+        background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04));
+        border: 1px solid rgba(99,102,241,0.18);
+        border-left: 4px solid #6366f1;
+        border-radius: 0.75rem;
+        padding: 1.15rem 1.3rem;
+    }
+    .ai-subsection-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #64748b;
+        margin-bottom: 0.75rem;
+    }
+    /* Strength badges */
+    .strength-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(16,185,129,0.10);
+        border: 1px solid rgba(16,185,129,0.28);
+        color: #065f46;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.4rem 0.85rem;
+        border-radius: 2rem;
+        transition: transform 0.15s ease;
+    }
+    .strength-badge:hover { transform: translateY(-1px); }
+    /* Weakness cards */
+    .weakness-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(245,158,11,0.09);
+        border: 1px solid rgba(245,158,11,0.28);
+        color: #92400e;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.4rem 0.85rem;
+        border-radius: 2rem;
+    }
+    /* Revision time badge */
+    .revision-time-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(59,130,246,0.08);
+        border: 1px solid rgba(59,130,246,0.20);
+        border-radius: 0.65rem;
+        padding: 0.75rem 1.15rem;
+        font-size: 0.92rem;
+        color: #1e40af;
+    }
+    .revision-time-badge strong {
+        font-size: 1.05rem;
+        font-weight: 800;
+    }
+    /* Study strategy box */
+    .strategy-box {
+        background: #f8fafc;
+        border: 1px solid rgba(148,163,184,0.22);
+        border-left: 4px solid #3b82f6;
+        border-radius: 0.65rem;
+        padding: 1rem 1.2rem;
+        font-size: 0.91rem;
+        color: #334155;
+        line-height: 1.65;
+    }
+    /* Motivation card */
+    .motivation-card {
+        background: linear-gradient(135deg, rgba(16,185,129,0.07), rgba(5,150,105,0.04));
+        border: 1px solid rgba(16,185,129,0.20);
+        border-radius: 0.85rem;
+        padding: 1.3rem 1.5rem;
+    }
+    /* Numbered priority list */
+    .priority-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .priority-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.7rem;
+        font-size: 0.88rem;
+        color: #334155;
+    }
+    .priority-num {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        background: rgba(99,102,241,0.12);
+        color: #4f46e5;
+        font-size: 0.75rem;
+        font-weight: 800;
+        flex-shrink: 0;
+        margin-top: 0.05rem;
+    }
+    /* Gap bullet list */
+    .gap-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .gap-list li {
+        font-size: 0.88rem;
+        color: #475569;
+        padding-left: 1.1rem;
+        position: relative;
+    }
+    .gap-list li::before {
+        content: '•';
+        position: absolute;
+        left: 0;
+        color: #94a3b8;
+    }
+    /* AI unavailable warning */
+    .ai-warning-box {
+        background: #fefce8;
+        border: 1px solid #fde68a;
+        border-radius: 0.65rem;
+        padding: 0.9rem 1.1rem;
+        font-size: 0.88rem;
+        color: #92400e;
+    }
 </style>
 
 <!-- ── Results Header ── -->
@@ -216,6 +371,138 @@
 <script id="result-data" type="application/json">
 [{% for item in questions_data %}{"correct":{{ item.is_correct|yesno:"true,false" }},"option":"{{ item.selected_option }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     AI Performance Analysis
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="card border-0 shadow-sm mb-5" id="ai-analysis-section">
+    <div class="card-body p-4 p-md-5">
+
+        <!-- Section header -->
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <div class="ai-section-header">
+                <h2 class="h5 fw-bold mb-0 text-dark">AI Performance Analysis</h2>
+                <span class="ai-badge-label">AI</span>
+            </div>
+            <span class="text-secondary small">Personalised revision guidance</span>
+        </div>
+
+        {% if analysis %}
+
+        <!-- ── 1. Performance Summary ──────────────────────────────── -->
+        <div class="ai-perf-card mb-4">
+            <div class="ai-subsection-title">📊 Overall Performance</div>
+            <p class="mb-0 text-dark" style="font-size:0.93rem;line-height:1.7;">
+                {{ analysis.performance_summary }}
+            </p>
+        </div>
+
+        <div class="row g-4 mb-4">
+
+            <!-- ── 2. Strengths ─────────────────────────────────────── -->
+            <div class="col-md-6">
+                <div class="ai-subsection-title">✅ Key Strengths</div>
+                {% if analysis.strengths %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for s in analysis.strengths %}
+                    <span class="strength-badge">
+                        <span style="color:#10b981;font-weight:800;">✓</span> {{ s }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary small mb-0">No specific strengths detected.</p>
+                {% endif %}
+            </div>
+
+            <!-- ── 3. Weak Areas ────────────────────────────────────── -->
+            <div class="col-md-6">
+                <div class="ai-subsection-title">⚠️ Weak Areas</div>
+                {% if analysis.weaknesses %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for w in analysis.weaknesses %}
+                    <span class="weakness-pill">
+                        <span style="font-weight:800;">!</span> {{ w }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary small mb-0">No weak areas identified.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── 4. Knowledge Gaps ──────────────────────────────────── -->
+        {% if analysis.knowledge_gaps %}
+        <div class="mb-4">
+            <div class="ai-subsection-title">🔍 Knowledge Gaps</div>
+            <ul class="gap-list">
+                {% for gap in analysis.knowledge_gaps %}
+                <li>{{ gap }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- ── 5. Revision Priority ───────────────────────────────── -->
+        {% if analysis.revision_priority %}
+        <div class="mb-4">
+            <div class="ai-subsection-title">🎯 Revision Priority</div>
+            <ol class="priority-list">
+                {% for item in analysis.revision_priority %}
+                <li>
+                    <span class="priority-num">{{ forloop.counter }}</span>
+                    <span>{{ item }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+
+        <!-- ── 6. Study Strategy ──────────────────────────────────── -->
+        <div class="mb-4">
+            <div class="ai-subsection-title">📚 Recommended Study Strategy</div>
+            <div class="strategy-box">{{ analysis.study_strategy }}</div>
+        </div>
+
+        <!-- ── 7. Estimated Revision Time ────────────────────────── -->
+        <div class="mb-4">
+            <div class="ai-subsection-title">⏱️ Estimated Revision Time</div>
+            <div class="revision-time-badge">
+                <span>🗓️</span>
+                <strong>{{ analysis.estimated_revision_time }}</strong>
+            </div>
+        </div>
+
+        <!-- ── 8. Motivation ─────────────────────────────────────── -->
+        <div class="motivation-card">
+            <div class="d-flex align-items-start gap-3">
+                <span style="font-size:1.5rem;line-height:1;">💪</span>
+                <div>
+                    <div class="ai-subsection-title mb-1">A Note From Your AI Coach</div>
+                    <p class="mb-0 text-dark" style="font-size:0.91rem;line-height:1.7;">
+                        {{ analysis.motivation }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {% elif analysis is None %}
+        <!-- AI failed — warn without breaking the page -->
+        <div class="ai-warning-box d-flex align-items-center gap-2">
+            <span>⚠️</span>
+            <span>
+                AI analysis is currently unavailable. Please try again later.
+            </span>
+        </div>
+
+        {% else %}
+        <!-- analysis == {} — should not normally appear once Phase 6.4 is active -->
+        <p class="text-secondary small mb-0">AI analysis is not available for this test.</p>
+        {% endif %}
+
+    </div>
+</div>
 
 <!-- ── Detailed Revision Breakdown ── -->
 <h2 class="h4 fw-bold mb-4 text-dark">Revision Breakdown</h2>

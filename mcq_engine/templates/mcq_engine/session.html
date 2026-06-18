@@ -299,7 +299,7 @@
 (function () {
     'use strict';
 
-    var TOTAL       = {{ test.total_questions }};
+    var TOTAL       = parseInt('{{ test.total_questions }}', 10);
     var form        = document.getElementById('assessment-form');
     var counter     = document.getElementById('answers-counter');
     var badge       = document.getElementById('progress-badge');

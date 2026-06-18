@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
@@ -7,6 +9,9 @@ from django.contrib import messages
 from .forms import AssessmentConfigForm
 from .models import MCQTest, MCQTestQuestion, MCQAnswer, Topic, Question
 from .services.test_generator import generate_test, InsufficientQuestionsError
+from .services.analysis_cache import get_or_generate_analysis
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -182,7 +187,18 @@ def test_results_view(request, test_id):
             'selected_option': ans.selected_option if ans else 'X',
         })
         
+    # ── AI Analysis (cache-aside) ────────────────────────────────────────
+    analysis = None
+    try:
+        analysis = get_or_generate_analysis(mcq_test)
+    except Exception as exc:
+        logger.exception(
+            "mcq_ai_analysis_failed test_id=%s error=%s", mcq_test.pk, exc
+        )
+        # analysis stays None; template shows a friendly warning instead
+
     return render(request, 'mcq_engine/result.html', {
-        'test': mcq_test,
-        'questions_data': questions_data
+        'test':           mcq_test,
+        'questions_data': questions_data,
+        'analysis':       analysis,
     })
