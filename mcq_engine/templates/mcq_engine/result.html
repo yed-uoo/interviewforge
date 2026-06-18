@@ -623,7 +623,7 @@
                 </div>
                 <div class="progress" style="height:7px;border-radius:4px;">
                     <div class="progress-bar {% if test.percentage >= 70 %}bg-success{% elif test.percentage >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-                        role="progressbar" style="width:{{ test.percentage }}%" aria-valuenow="{{ test.percentage }}"
+                        role="progressbar" data-width="{{ test.percentage }}%" aria-valuenow="{{ test.percentage }}"
                         aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
@@ -648,7 +648,7 @@
             <div class="diff-bar-col">
                 <div class="diff-bar-track">
                     <div class="diff-bar-fill {% if easy.accuracy >= 70 %}green{% elif easy.accuracy >= 40 %}yellow{% else %}red{% endif %}"
-                        style="width:{{ easy.accuracy }}%;"></div>
+                        data-width="{{ easy.accuracy }}%"></div>
                 </div>
             </div>
             <div class="diff-meta-col text-muted">{{ easy.correct }}&thinsp;/&thinsp;{{ easy.total }} correct</div>
@@ -666,7 +666,7 @@
             <div class="diff-bar-col">
                 <div class="diff-bar-track">
                     <div class="diff-bar-fill {% if medium.accuracy >= 70 %}green{% elif medium.accuracy >= 40 %}yellow{% else %}red{% endif %}"
-                        style="width:{{ medium.accuracy }}%;"></div>
+                        data-width="{{ medium.accuracy }}%"></div>
                 </div>
             </div>
             <div class="diff-meta-col text-muted">{{ medium.correct }}&thinsp;/&thinsp;{{ medium.total }} correct</div>
@@ -684,7 +684,7 @@
             <div class="diff-bar-col">
                 <div class="diff-bar-track">
                     <div class="diff-bar-fill {% if hard.accuracy >= 70 %}green{% elif hard.accuracy >= 40 %}yellow{% else %}red{% endif %}"
-                        style="width:{{ hard.accuracy }}%;"></div>
+                        data-width="{{ hard.accuracy }}%"></div>
                 </div>
             </div>
             <div class="diff-meta-col text-muted">{{ hard.correct }}&thinsp;/&thinsp;{{ hard.total }} correct</div>
@@ -1061,6 +1061,12 @@
 <script>
     (function () {
         'use strict';
+        
+        // Apply dynamic widths to bypass inline CSS parsing errors in IDE
+        document.querySelectorAll('[data-width]').forEach(function (el) {
+            el.style.width = el.getAttribute('data-width');
+        });
+
         var raw = document.getElementById('result-data');
         if (!raw) return;
         try {
