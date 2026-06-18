@@ -20,10 +20,16 @@ Coverage
 ✓ Empty test (no questions) raises ValueError
 ✓ _extract_json strips markdown fences correctly
 ✓ _extract_json locates JSON embedded in surrounding text
+✓ _extract_json tolerates raw newlines inside string values
+✓ _extract_json tolerates trailing commas
+✓ _extract_json tolerates smart/curly quotes
 ✓ _validate_response accepts valid data
 ✓ _validate_response rejects missing field
 ✓ _validate_response rejects wrong type
 ✓ No GROQ_API_KEY raises AIAnalysisError
+✓ Retry logic: first failure triggers single retry
+✓ Retry success: retry returns valid dict after initial parse failure
+✓ Retry failure: both attempts fail → raises the second exception
 """
 
 import json
@@ -45,6 +51,7 @@ from mcq_engine.services.ai_analysis import (
     AIAnalysisError,
     AIValidationError,
     _extract_json,
+    _sanitise_json_string,
     _validate_response,
     generate_ai_analysis,
 )
@@ -371,3 +378,246 @@ class TestGetGroqClientMissingKey(TestCase):
         with self.assertRaises(AIAnalysisError) as ctx:
             _get_groq_client()
         self.assertIn("GROQ_API_KEY", str(ctx.exception))
+
+
+# ===========================================================================
+# Tests for _sanitise_json_string
+# ===========================================================================
+
+class TestSanitiseJsonString(TestCase):
+    """Unit tests for the JSON sanitisation helper."""
+
+    def test_plain_string_unchanged(self):
+        s = '{"key": "value"}'
+        self.assertEqual(_sanitise_json_string(s), s)
+
+    def test_strips_markdown_json_fence(self):
+        s = '```json\n{"key": "val"}\n```'
+        result = _sanitise_json_string(s)
+        self.assertNotIn("```", result)
+        self.assertIn('"key"', result)
+
+    def test_strips_plain_markdown_fence(self):
+        s = '```\n{"key": "val"}\n```'
+        result = _sanitise_json_string(s)
+        self.assertNotIn("```", result)
+
+    def test_strips_mid_string_fence(self):
+        """Fences that don't start at position 0 are also removed."""
+        s = 'Sure! Here you go:\n```json\n{"k": "v"}\n```'
+        result = _sanitise_json_string(s)
+        self.assertNotIn("```", result)
+
+    def test_replaces_smart_double_quotes(self):
+        s = '\u201cvalue\u201d'
+        self.assertIn('"', _sanitise_json_string(s))
+        self.assertNotIn('\u201c', _sanitise_json_string(s))
+        self.assertNotIn('\u201d', _sanitise_json_string(s))
+
+    def test_replaces_smart_single_quotes(self):
+        s = "\u2018value\u2019"
+        result = _sanitise_json_string(s)
+        self.assertIn("'", result)
+
+    def test_removes_trailing_comma_before_brace(self):
+        s = '{"a": 1,}'
+        result = _sanitise_json_string(s)
+        self.assertNotIn(',}', result)
+
+    def test_removes_trailing_comma_before_bracket(self):
+        s = '{"a": [1, 2,]}'
+        result = _sanitise_json_string(s)
+        self.assertNotIn(',]', result)
+
+    def test_escapes_bare_newline_in_string(self):
+        # A raw newline inside a JSON string value is illegal; it should be escaped
+        raw = '{"key": "line1\nline2"}'
+        result = _sanitise_json_string(raw)
+        # After sanitisation the string should be parseable
+        parsed = json.loads(result)
+        self.assertIn("line1", parsed["key"])
+        self.assertIn("line2", parsed["key"])
+
+    def test_escapes_bare_carriage_return_in_string(self):
+        raw = '{"key": "val\rend"}'
+        result = _sanitise_json_string(raw)
+        parsed = json.loads(result)
+        self.assertIn("val", parsed["key"])
+
+    def test_does_not_escape_structural_newlines(self):
+        """Newlines outside string values are structural and must be preserved."""
+        raw = '{\n    "key": "value"\n}'
+        result = _sanitise_json_string(raw)
+        parsed = json.loads(result)
+        self.assertEqual(parsed["key"], "value")
+
+    def test_already_escaped_newlines_not_double_escaped(self):
+        """\\n inside a JSON string (already escaped) must stay as-is."""
+        raw = json.dumps({"key": "line1\nline2"})   # json.dumps escapes correctly
+        result = _sanitise_json_string(raw)
+        parsed = json.loads(result)
+        self.assertEqual(parsed["key"], "line1\nline2")
+
+
+# ===========================================================================
+# New _extract_json tolerance tests
+# ===========================================================================
+
+class TestExtractJsonTolerance(TestCase):
+    """Extra _extract_json tests covering LLM quirks."""
+
+    def test_raw_newline_inside_string_value(self):
+        """The root cause of the production bug: raw \n inside a JSON string."""
+        # Build a JSON string that has an unescaped newline in a value
+        raw = '{"performance_summary": "line one\nline two", "x": 1}'
+        result = _extract_json(raw)
+        self.assertIn("performance_summary", result)
+        self.assertIn("line one", result["performance_summary"])
+
+    def test_trailing_commas_tolerated(self):
+        raw = '{"a": "v1", "b": [1, 2,],}'
+        result = _extract_json(raw)
+        self.assertEqual(result["a"], "v1")
+        self.assertEqual(result["b"], [1, 2])
+
+    def test_smart_quotes_in_values(self):
+        raw = '{\u201ckey\u201d: \u201cvalue\u201d}'
+        result = _extract_json(raw)
+        self.assertIn("key", result)
+        self.assertEqual(result["key"], "value")
+
+    def test_leading_and_trailing_explanatory_text(self):
+        preamble = "Here is your JSON analysis:\n"
+        postamble = "\nI hope this helps!"
+        payload = json.dumps({"performance_summary": "good", "x": 1})
+        result = _extract_json(preamble + payload + postamble)
+        self.assertEqual(result["performance_summary"], "good")
+
+    def test_extra_whitespace_around_json(self):
+        raw = "   \n   " + json.dumps({"k": "v"}) + "   \n   "
+        result = _extract_json(raw)
+        self.assertEqual(result["k"], "v")
+
+    def test_error_message_says_extraction_when_no_braces(self):
+        with self.assertRaises(AIAnalysisError) as ctx:
+            _extract_json("no braces here")
+        self.assertIn("extraction", str(ctx.exception).lower())
+
+    def test_error_message_says_parsing_on_bad_json(self):
+        with self.assertRaises(AIAnalysisError) as ctx:
+            _extract_json("{truly broken: [}")
+        self.assertIn("parsing", str(ctx.exception).lower())
+
+
+# ===========================================================================
+# Validate response error message tests
+# ===========================================================================
+
+class TestValidateResponseMessages(TestCase):
+    """Verify that AIValidationError messages include 'Schema validation failure'."""
+
+    def test_missing_field_message_prefix(self):
+        data = dict(VALID_AI_RESPONSE)
+        del data["motivation"]
+        with self.assertRaises(AIValidationError) as ctx:
+            _validate_response(data)
+        self.assertIn("Schema validation failure", str(ctx.exception))
+
+    def test_wrong_type_message_prefix(self):
+        data = dict(VALID_AI_RESPONSE)
+        data["strengths"] = "not a list"
+        with self.assertRaises(AIValidationError) as ctx:
+            _validate_response(data)
+        self.assertIn("Schema validation failure", str(ctx.exception))
+
+
+# ===========================================================================
+# Retry logic tests
+# ===========================================================================
+
+class TestRetryLogic(AIAnalysisTestBase):
+    """Tests for the single-retry behaviour in generate_ai_analysis."""
+
+    @patch(GROQ_PATCH)
+    def test_retry_called_on_parse_failure(self, mock_call):
+        """
+        When the first response is unparseable, _call_groq must be called
+        a second time (retry), and if the retry also fails, AIAnalysisError
+        is raised.
+        """
+        mock_call.return_value = "not valid json at all, no braces"
+        test = self._make_completed_test()
+        with self.assertRaises(AIAnalysisError):
+            generate_ai_analysis(test)
+        # Should have been called twice: original attempt + 1 retry
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch(GROQ_PATCH)
+    def test_retry_success_returns_valid_dict(self, mock_call):
+        """
+        First call returns malformed JSON; second call (retry) returns valid
+        JSON → generate_ai_analysis must succeed.
+        """
+        mock_call.side_effect = [
+            "not json at all",                   # first attempt fails
+            json.dumps(VALID_AI_RESPONSE),        # retry succeeds
+        ]
+        test = self._make_completed_test()
+        result = generate_ai_analysis(test)
+        self.assertIsInstance(result, dict)
+        self.assertIn("performance_summary", result)
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch(GROQ_PATCH)
+    def test_retry_failure_raises_error(self, mock_call):
+        """
+        Both attempts return bad JSON → AIAnalysisError is raised after the
+        retry (not after the first attempt only).
+        """
+        mock_call.return_value = "still no json here"
+        test = self._make_completed_test()
+        with self.assertRaises(AIAnalysisError):
+            generate_ai_analysis(test)
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch(GROQ_PATCH)
+    def test_retry_on_validation_failure(self, mock_call):
+        """
+        First call returns JSON that passes parsing but fails schema validation.
+        Second call returns valid JSON → should succeed.
+        """
+        bad = dict(VALID_AI_RESPONSE)
+        del bad["motivation"]  # triggers AIValidationError
+
+        mock_call.side_effect = [
+            json.dumps(bad),                    # first: schema validation failure
+            json.dumps(VALID_AI_RESPONSE),      # retry: success
+        ]
+        test = self._make_completed_test()
+        result = generate_ai_analysis(test)
+        self.assertIn("motivation", result)
+        self.assertEqual(mock_call.call_count, 2)
+
+    @patch(GROQ_PATCH)
+    def test_auth_failure_not_retried(self, mock_call):
+        """
+        Authentication errors should NOT trigger a retry — they indicate a
+        misconfiguration, not a transient parsing problem.
+        """
+        mock_call.side_effect = AIAnalysisError(
+            "API failure: AI service authentication failed. Check GROQ_API_KEY."
+        )
+        test = self._make_completed_test()
+        with self.assertRaises(AIAnalysisError) as ctx:
+            generate_ai_analysis(test)
+        self.assertIn("authentication failed", str(ctx.exception))
+        # Must NOT have retried
+        self.assertEqual(mock_call.call_count, 1)
+
+    @patch(GROQ_PATCH)
+    def test_no_retry_on_clean_success(self, mock_call):
+        """When the first attempt succeeds, _call_groq must be called exactly once."""
+        mock_call.return_value = json.dumps(VALID_AI_RESPONSE)
+        test = self._make_completed_test()
+        generate_ai_analysis(test)
+        self.assertEqual(mock_call.call_count, 1)

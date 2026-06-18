@@ -175,56 +175,58 @@ for the learner. Follow every rule below without exception.
 ### REPORT SECTIONS (include ALL of these)
 
 1. **Overall Performance Summary**
-   Interpret the scores — do not merely restate percentages.
-   Explain what the result means for the learner's interview readiness.
+   Provide exactly 3 to 4 concise bullet points separated by newlines, with NO bullet symbols (do NOT use -, *, •, or numbers). Keep each bullet under 15 words. Outline:
+   - Core concept understanding / overall progress.
+   - Performance by difficulty (e.g., Easy vs Hard).
+   - Key weaknesses/areas needing practice.
+   - Next steps / immediate subtopic focus.
+   Example:
+   Strong understanding of DBMS fundamentals.
+   Excellent performance in Easy questions.
+   Hard questions require additional practice.
+   Focus next on Transactions and Indexing.
 
 2. **Key Strengths**
-   Highlight the subtopics where the learner performed well.
-   Explain WHY these are positive signs.
+   Identify subtopics where the learner performed well. Each strength must be a concise string in the format "TopicName: Short explanation (max 10 words)". Do NOT generate paragraphs. Max 3 strengths.
+   Example: "Joins: Strong conceptual understanding."
 
 3. **Weak Areas**
-   Describe the subtopics where the learner struggled.
-   Distinguish between wrong answers (misconceptions) and
-   "I Don't Know" responses (knowledge gaps).
+   Identify subtopics where the learner struggled. Each weakness must be a concise string in the format "TopicName: Short explanation (max 10 words)". Do NOT generate paragraphs. Max 3 weaknesses.
+   Example: "Transactions: Needs conceptual revision."
 
 4. **Knowledge Gaps**
-   Focus specifically on subtopics where many questions were marked
-   "I Don't Know". These represent topics the learner has not yet studied
-   — they are not the same as misunderstood topics.
+   List subtopics with high skipped ("I Don't Know") counts. Each gap must be a single concise sentence under 15 words. Bullet-style. No paragraphs.
+   Example: "ACID properties require revision."
 
 5. **Revision Priority**
-   Rank weak and critical subtopics from HIGHEST to LOWEST priority.
-   Justify each ranking briefly.
+   Rank weak and critical subtopics from HIGHEST to LOWEST priority. Each priority must be a concise string in the format "TopicName: One-line reason (max 15 words)". Max 3 items.
+   Example: "Transactions: Foundation topic affecting multiple interview questions."
 
 6. **Recommended Study Strategy**
-   Provide concrete, actionable study advice for each weak area.
-   Do NOT say "study more" or "review the material".
-   Instead, suggest specific techniques:
-     - active recall, spaced repetition, worked examples, flashcards, etc.
-   Match the strategy to the difficulty level of the subtopic.
+   Provide concrete, actionable checklist items separated by newlines (without bullet characters like -, *, •, or numbers). Maximum 5 checklist items total, under 15 words each. Do NOT write prose/paragraphs.
+   Example:
+   Review Transactions theory
+   Practice Indexing questions
+   Revise ACID properties
 
 7. **Estimated Revision Time**
-   Provide a realistic estimate of how many hours/days the learner
-   needs to reach a competent level in each weak area.
-   Base the estimate on the number of weak subtopics and their severity.
+   Provide a brief, single-sentence time estimate (will be ignored by UI, but keep for schema compatibility).
 
 8. **Motivational Feedback**
-   Be professional, genuine and encouraging.
-   Acknowledge the effort the learner has already made.
-   Do NOT exaggerate or give empty praise.
+   Be professional and encouraging. Provide maximum 2 to 3 sentences total. Avoid motivational essays or generic empty praise.
 
 ---
 
 ### STRICT RULES
 
-- Do NOT repeat raw statistics. Interpret them.
-- Do NOT list percentages without explaining what they mean.
-- Recommendations MUST be specific to the identified weak topics.
-- If the learner marked many questions as "I Don't Know", treat this as a
-  knowledge gap (unexplored content), NOT as a sign of failure.
-- Be honest about areas that need significant work.
-- Avoid generic advice that would apply to any learner.
-- Be encouraging but realistic.
+- Use concise professional language suitable for an analytics dashboard (resembling GitHub Insights, LeetCode, or LinkedIn Skill Assessment).
+- Do NOT use paragraphs or prose where lists/bullets are requested.
+- Maximum 2 to 3 sentences for any text field.
+- No motivational essays. Keep feedback extremely brief and actionable.
+- No repeated information across sections.
+- No generic advice. Every recommendation must reference actual weak subtopics.
+- Prefer list-friendly formats.
+- NEVER include emojis in any output field.
 
 ---
 
@@ -234,27 +236,28 @@ Return ONLY valid JSON. No markdown, no code fences, no extra text.
 Use exactly this schema:
 
 {
-    "performance_summary": "<string: overall interpretation>",
+    "performance_summary": "<string: 3-4 newline-separated bullets, no symbols>",
     "strengths": [
-        "<string: strength insight 1>",
-        "<string: strength insight 2>"
+        "<string: TopicName: Explanation>",
+        "<string: TopicName: Explanation>"
     ],
     "weaknesses": [
-        "<string: weakness insight 1>",
-        "<string: weakness insight 2>"
+        "<string: TopicName: Explanation>",
+        "<string: TopicName: Explanation>"
     ],
     "knowledge_gaps": [
         "<string: gap description 1>",
         "<string: gap description 2>"
     ],
     "revision_priority": [
-        "<string: highest priority topic + rationale>",
-        "<string: next priority topic + rationale>"
+        "<string: TopicName: Reason>",
+        "<string: TopicName: Reason>"
     ],
-    "study_strategy": "<string: concrete multi-step study plan>",
-    "estimated_revision_time": "<string: realistic time estimate per area>",
-    "motivation": "<string: genuine, professional encouragement>"
+    "study_strategy": "<string: newline-separated checklist items, no symbols>",
+    "estimated_revision_time": "<string: realistic time estimate>",
+    "motivation": "<string: 2-3 sentences of genuine, professional encouragement>"
 }"""
+
 
 
 # ---------------------------------------------------------------------------

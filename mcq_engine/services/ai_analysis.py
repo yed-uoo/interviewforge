@@ -21,13 +21,21 @@ Architecture
         │
         ├─ _generate_prompt(test)        validates + builds prompt via Phase 6.1 / 6.2
         ├─ _call_groq(prompt)            sends prompt → Groq, returns raw content str
-        ├─ _extract_json(content)        strips markdown fences, locates JSON object
+        ├─ _extract_json(content)        sanitises + locates + parses JSON object
+        │      tolerates: markdown fences, trailing commas, smart quotes,
+        │                 raw newlines inside strings, extra whitespace
         └─ _validate_response(data)      type-checks every required field
 
 Custom exceptions
 -----------------
     AIAnalysisError      – base for all failures raised by this module
     AIValidationError    – subclass raised when the AI response schema is wrong
+
+Retry behaviour
+---------------
+    If _extract_json() or _validate_response() fails on the first Groq call,
+    generate_ai_analysis() automatically retries _call_groq() once before
+    raising the error to the caller.
 """
 
 from __future__ import annotations
@@ -35,6 +43,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any
 
 from dotenv import load_dotenv
@@ -156,63 +165,154 @@ def _call_groq(prompt: str) -> str:
             timeout=30,
         )
     except AuthenticationError as exc:
-        raise AIAnalysisError("AI service authentication failed. Check GROQ_API_KEY.") from exc
+        raise AIAnalysisError(
+            "API failure: AI service authentication failed. Check GROQ_API_KEY."
+        ) from exc
     except RateLimitError as exc:
-        raise AIAnalysisError("AI service is currently busy. Please try again in a moment.") from exc
+        raise AIAnalysisError(
+            "API failure: AI service is currently busy. Please try again in a moment."
+        ) from exc
     except APITimeoutError as exc:
-        raise AIAnalysisError("AI analysis timed out. Please try again.") from exc
+        raise AIAnalysisError(
+            "API failure: AI analysis timed out. Please try again."
+        ) from exc
     except APIError as exc:
-        raise AIAnalysisError(f"AI service error: {exc}") from exc
+        raise AIAnalysisError(f"API failure: AI service error: {exc}") from exc
     except Exception as exc:
         logger.exception("Unexpected error calling Groq")
-        raise AIAnalysisError("Unexpected error communicating with AI service.") from exc
+        raise AIAnalysisError(
+            "API failure: Unexpected error communicating with AI service."
+        ) from exc
 
     # ── Guard against empty / malformed Groq response ────────────────────
     if not response:
-        raise AIAnalysisError("No response received from AI service.")
+        raise AIAnalysisError("API failure: No response received from AI service.")
     if not response.choices:
-        raise AIAnalysisError("AI service returned an empty choices list.")
+        raise AIAnalysisError("API failure: AI service returned an empty choices list.")
 
     message = response.choices[0].message
     if not message or not message.content:
-        raise AIAnalysisError("AI service returned a blank message.")
+        raise AIAnalysisError("API failure: AI service returned a blank message.")
 
     return message.content.strip()
 
 
+def _sanitise_json_string(raw: str) -> str:
+    """
+    Apply a series of tolerant transformations to clean up common LLM
+    JSON formatting issues before parsing.
+
+    Transformations (in order):
+    1. Strip markdown code fences (```json … ``` or ``` … ```)
+    2. Replace curly/smart quotes with straight ASCII quotes
+    3. Remove control characters that are illegal in JSON string values
+       (specifically bare CR, LF, TAB — i.e. the bytes 0x00-0x1F except
+       those already escaped as \\n, \\t, \\r).
+    4. Remove trailing commas before } or ] (invalid JSON but common in LLMs)
+    5. Strip surrounding whitespace
+    """
+    s = raw
+
+    # 1. Strip markdown code fences (any position, not just start-of-string)
+    s = re.sub(r"```(?:json)?", "", s)
+    s = s.replace("```", "")
+
+    # 2. Normalise smart / curly quotes to ASCII equivalents
+    s = s.replace("\u2018", "'").replace("\u2019", "'")  # left/right single quotes
+    s = s.replace("\u201c", '"').replace("\u201d", '"')  # left/right double quotes
+    s = s.replace("\u201e", '"').replace("\u201f", '"')  # double low-9 / reversed
+
+    # 3. Replace raw (unescaped) control characters inside JSON strings.
+    #    We process character-by-character only inside string literals to
+    #    avoid mangling whitespace that is part of the JSON structure itself.
+    #    Strategy: outside strings, control chars are structural (fine to keep
+    #    \n, \t for readability). Inside strings we replace bare \n/\r/\t
+    #    with their JSON escape sequences.
+    result = []
+    inside_string = False
+    escape_next   = False
+    for ch in s:
+        if escape_next:
+            result.append(ch)
+            escape_next = False
+            continue
+        if ch == "\\":
+            result.append(ch)
+            escape_next = True
+            continue
+        if ch == '"':
+            inside_string = not inside_string
+            result.append(ch)
+            continue
+        if inside_string:
+            # Replace bare control characters with JSON escape sequences
+            if ch == "\n":
+                result.append("\\n")
+            elif ch == "\r":
+                result.append("\\r")
+            elif ch == "\t":
+                result.append("\\t")
+            elif ord(ch) < 0x20:
+                # Other ASCII control chars — just skip them
+                pass
+            else:
+                result.append(ch)
+        else:
+            result.append(ch)
+    s = "".join(result)
+
+    # 4. Remove trailing commas before closing braces / brackets
+    #    (e.g. {"key": "value",} or ["a", "b",])
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+
+    # 5. Strip surrounding whitespace
+    s = s.strip()
+
+    return s
+
+
 def _extract_json(content: str) -> dict[str, Any]:
     """
-    Strip markdown code fences if present, then locate and parse the JSON
-    object in ``content``.
+    Locate and parse the JSON object in ``content``, tolerating common LLM
+    formatting issues.
 
-    Uses the same fence-stripping + brace-finding strategy as
-    ``interviews.ai_generator.generate_interview_questions``.
+    Processing steps
+    ----------------
+    1. Log the full raw response at DEBUG level.
+    2. Sanitise the content with ``_sanitise_json_string``.
+    3. Find the outermost ``{...}`` block.
+    4. Attempt ``json.loads``.
 
     Raises
     ------
     AIAnalysisError
-        If no JSON object can be located or the content is not valid JSON.
+        – "JSON extraction failure: …"  — if no JSON object is found.
+        – "JSON parsing failure: …"     — if ``json.loads`` fails after
+                                          sanitisation.
     """
-    # Strip markdown fences (```json … ``` or ``` … ```)
-    if content.startswith("```"):
-        content = content.replace("```json", "").replace("```", "").strip()
+    # 1. Log raw response for debugging
+    logger.debug("AI raw response (length=%d):\n%s", len(content), content)
 
-    # Locate the outermost JSON object
-    start = content.find("{")
-    end   = content.rfind("}")
+    # 2. Sanitise
+    sanitised = _sanitise_json_string(content)
+
+    # 3. Locate outermost JSON object
+    start = sanitised.find("{")
+    end   = sanitised.rfind("}")
 
     if start == -1 or end == -1 or end <= start:
         raise AIAnalysisError(
-            "AI response does not contain a valid JSON object."
+            "JSON extraction failure: AI response does not contain a valid JSON object."
         )
 
-    json_str = content[start : end + 1]
+    json_str = sanitised[start : end + 1]
 
+    # 4. Parse
     try:
         return json.loads(json_str)
     except json.JSONDecodeError as exc:
         raise AIAnalysisError(
-            f"AI returned malformed JSON: {exc}"
+            f"JSON parsing failure: AI returned malformed JSON after sanitisation: {exc}"
         ) from exc
 
 
@@ -223,7 +323,8 @@ def _validate_response(data: dict[str, Any]) -> dict[str, Any]:
     Raises
     ------
     AIValidationError
-        On the first field that is missing or has the wrong type.
+        "Schema validation failure: …" on the first field that is missing
+        or has the wrong type.
 
     Returns
     -------
@@ -233,12 +334,12 @@ def _validate_response(data: dict[str, Any]) -> dict[str, Any]:
     for field, expected_type in _REQUIRED_FIELDS.items():
         if field not in data:
             raise AIValidationError(
-                f"AI response is missing required field: '{field}'."
+                f"Schema validation failure: AI response is missing required field: '{field}'."
             )
         if not isinstance(data[field], expected_type):
             raise AIValidationError(
-                f"Field '{field}' must be {expected_type.__name__}, "
-                f"got {type(data[field]).__name__}."
+                f"Schema validation failure: field '{field}' must be "
+                f"{expected_type.__name__}, got {type(data[field]).__name__}."
             )
 
     return data
@@ -277,9 +378,16 @@ def generate_ai_analysis(test: MCQTest) -> dict[str, Any]:
         If the test is not COMPLETED or has no questions
         (propagated from ``build_test_summary``).
     AIAnalysisError
-        For any Groq connectivity / response failure.
+        For any Groq connectivity / response failure, JSON extraction failure,
+        or JSON parsing failure.
     AIValidationError
         If the AI response does not match the required schema.
+
+    Retry behaviour
+    ---------------
+    If JSON extraction or schema validation fails on the first attempt,
+    the Groq call is retried once.  If the retry also fails, the exception
+    from the retry is raised.
     """
     # Step 1 + 2 + 3: validate test, compute analytics, build prompt
     prompt, summary = _generate_prompt(test)
@@ -290,19 +398,30 @@ def generate_ai_analysis(test: MCQTest) -> dict[str, Any]:
         summary.get("topic"),
     )
 
-    # Step 4: call Groq
-    raw_content = _call_groq(prompt)
+    def _attempt(attempt_number: int) -> dict[str, Any]:
+        """Single attempt: call Groq → extract JSON → validate schema."""
+        logger.debug("mcq_ai_analysis attempt=%d test_id=%s", attempt_number, test.pk)
+        raw_content = _call_groq(prompt)
+        data        = _extract_json(raw_content)
+        return _validate_response(data)
 
-    # Step 5 + 6: extract JSON
-    data = _extract_json(raw_content)
+    # First attempt
+    try:
+        validated = _attempt(1)
+    except (AIAnalysisError, AIValidationError) as first_exc:
+        # Only retry on extraction/validation failures, not on API auth errors
+        if "API failure: AI service authentication failed" in str(first_exc):
+            raise
 
-    # Step 7: validate schema
-    validated = _validate_response(data)
+        logger.warning(
+            "mcq_ai_analysis first attempt failed (test_id=%s): %s — retrying once",
+            test.pk,
+            first_exc,
+        )
+        # Retry once
+        validated = _attempt(2)   # propagates if it also fails
 
-    logger.info(
-        "mcq_ai_analysis_complete test_id=%s",
-        test.pk,
-    )
+    logger.info("mcq_ai_analysis_complete test_id=%s", test.pk)
 
-    # Step 8: return pure Python dict (no model instances, no DB writes)
+    # Return pure Python dict (no model instances, no DB writes)
     return validated

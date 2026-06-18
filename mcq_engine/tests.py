@@ -173,4 +173,5 @@ class MCQTestWorkflowTestCase(TestCase):
         self.assertTemplateUsed(response, 'mcq_engine/result.html')
         self.assertContains(response, 'Revision Breakdown')
         self.assertContains(response, '100.00%')
-        self.assertContains(response, 'Passed')
+        self.assertContains(response, 'Outstanding Performance')  # updated: 90-100% tier label
+

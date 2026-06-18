@@ -2,269 +2,563 @@
 
 {% block content %}
 <style>
+    /* ─── Base helpers ──────────────────────────────────────────────────── */
+    .section-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.35rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0;
+    }
+
+    .divider-row {
+        border-top: 1px solid rgba(148, 163, 184, 0.15);
+        margin: 1.5rem 0;
+    }
+
+    /* ─── Result options ────────────────────────────────────────────────── */
     .option-item {
         border: 1px solid rgba(148, 163, 184, 0.2);
         padding: 0.75rem 1rem;
         border-radius: 0.5rem;
-        background-color: #ffffff;
+        background: #fff;
+        font-size: 0.9rem;
     }
+
     .option-correct {
         border-color: #10b981 !important;
-        background-color: rgba(16, 185, 129, 0.06) !important;
+        background: rgba(16, 185, 129, 0.05) !important;
         color: #065f46 !important;
     }
+
     .option-incorrect {
         border-color: #ef4444 !important;
-        background-color: rgba(239, 68, 68, 0.06) !important;
+        background: rgba(239, 68, 68, 0.05) !important;
         color: #991b1b !important;
     }
+
+    .explanation-box {
+        border-left: 3px solid #3b82f6;
+        background: #f0f9ff;
+        border-radius: 0.5rem;
+        padding: 1rem 1.1rem;
+    }
+
     .result-badge {
-        font-size: 0.82rem;
-        padding: 0.35rem 0.75rem;
+        font-size: 0.78rem;
+        padding: 0.3rem 0.65rem;
         border-radius: 2rem;
         font-weight: 600;
     }
-    .explanation-box {
-        border-left: 4px solid #3b82f6;
-        background-color: #f0f9ff;
-    }
 
-    /* ── Summary stat cards ── */
-    .summary-stat {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem 1.25rem;
-        background: #ffffff;
+    /* ─── Summary stat tiles ────────────────────────────────────────────── */
+    .stat-tile {
+        background: #fff;
         border: 1px solid rgba(148, 163, 184, 0.18);
         border-radius: 0.75rem;
+        padding: 1rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
     }
-    .summary-stat-icon {
-        width: 2.6rem;
-        height: 2.6rem;
-        border-radius: 0.6rem;
+
+    .stat-tile-icon {
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: 0.55rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: 0.95rem;
+        font-weight: 700;
         flex-shrink: 0;
     }
-    .summary-stat-icon.green  { background: rgba(16, 185, 129, 0.12); }
-    .summary-stat-icon.red    { background: rgba(239, 68, 68, 0.10); }
-    .summary-stat-icon.yellow { background: rgba(245, 158, 11, 0.12); }
-    .summary-stat-icon.blue   { background: rgba(59, 130, 246, 0.10); }
-    .summary-stat-body { flex: 1; }
-    .summary-stat-label {
-        font-size: 0.78rem;
+
+    .stat-tile-icon.green {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+    }
+
+    .stat-tile-icon.red {
+        background: rgba(239, 68, 68, 0.10);
+        color: #dc2626;
+    }
+
+    .stat-tile-icon.yellow {
+        background: rgba(245, 158, 11, 0.12);
+        color: #b45309;
+    }
+
+    .stat-tile-icon.blue {
+        background: rgba(59, 130, 246, 0.10);
+        color: #2563eb;
+    }
+
+    .stat-tile-label {
+        font-size: 0.72rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: #64748b;
         line-height: 1;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.2rem;
     }
-    .summary-stat-value {
-        font-size: 1.45rem;
+
+    .stat-tile-value {
+        font-size: 1.35rem;
         font-weight: 800;
-        color: #1e293b;
         line-height: 1;
     }
-    .summary-stat-value.green  { color: #059669; }
-    .summary-stat-value.red    { color: #dc2626; }
-    .summary-stat-value.yellow { color: #d97706; }
-    .summary-stat-value.blue   { color: #2563eb; }
 
-    /* ── AI Analysis section ── */
-    .ai-section-header {
+    .stat-tile-value.green {
+        color: #059669;
+    }
+
+    .stat-tile-value.red {
+        color: #dc2626;
+    }
+
+    .stat-tile-value.yellow {
+        color: #b45309;
+    }
+
+    .stat-tile-value.blue {
+        color: #2563eb;
+    }
+
+    /* ─── Difficulty breakdown ──────────────────────────────────────────── */
+    .diff-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .diff-row:last-child {
+        border-bottom: none;
+    }
+
+    .diff-label-col {
+        width: 4rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #475569;
+        flex-shrink: 0;
+    }
+
+    .diff-bar-col {
+        flex: 1;
+    }
+
+    .diff-bar-track {
+        height: 6px;
+        background: rgba(148, 163, 184, 0.18);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .diff-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+
+    .diff-bar-fill.green {
+        background: #10b981;
+    }
+
+    .diff-bar-fill.yellow {
+        background: #f59e0b;
+    }
+
+    .diff-bar-fill.red {
+        background: #ef4444;
+    }
+
+    .diff-meta-col {
+        width: 8rem;
+        text-align: right;
+        font-size: 0.78rem;
+        color: #64748b;
+        flex-shrink: 0;
+    }
+
+    .diff-pct-col {
+        width: 3.5rem;
+        text-align: right;
+        font-size: 0.85rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    /* ─── Subtopic table ────────────────────────────────────────────────── */
+    .subtopic-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.85rem;
+    }
+
+    .subtopic-table thead th {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .subtopic-table tbody td {
+        padding: 0.6rem 0.75rem;
+        color: #334155;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        vertical-align: middle;
+    }
+
+    .subtopic-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .subtopic-table tbody tr:hover td {
+        background: rgba(248, 250, 252, 0.8);
+    }
+
+    .acc-badge {
+        display: inline-block;
+        padding: 0.18rem 0.55rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .acc-badge.high {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    .acc-badge.medium {
+        background: rgba(245, 158, 11, 0.1);
+        color: #b45309;
+    }
+
+    .acc-badge.low {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+
+    /* ─── AI Analysis card ──────────────────────────────────────────────── */
+    .ai-chip {
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        background: #6366f1;
+        color: #fff;
+        padding: 0.2rem 0.55rem;
+        border-radius: 2rem;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .ai-subsection {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.65rem;
+    }
+
+    /* Performance banner inside AI card */
+    .perf-banner {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        border-left: 3px solid #6366f1;
+        border-radius: 0.6rem;
+        padding: 1rem 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .perf-banner-score {
+        font-size: 2.25rem;
+        font-weight: 900;
+        line-height: 1;
+        color: #4f46e5;
+        flex-shrink: 0;
+    }
+
+    .perf-banner-tag {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #6366f1;
+        letter-spacing: 0.04em;
+    }
+
+    .perf-banner-summary {
+        font-size: 0.85rem;
+        color: #475569;
+        line-height: 1.6;
+        margin-top: 0.3rem;
+    }
+
+    /* Compact strength / weakness items */
+    .insight-item {
+        background: #fff;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 0.6rem;
+        padding: 0.7rem 0.9rem;
         display: flex;
         align-items: center;
         gap: 0.6rem;
-    }
-    .ai-badge-label {
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: #fff;
-        padding: 0.25rem 0.6rem;
-        border-radius: 2rem;
-        line-height: 1;
-    }
-    .ai-perf-card {
-        background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04));
-        border: 1px solid rgba(99,102,241,0.18);
-        border-left: 4px solid #6366f1;
-        border-radius: 0.75rem;
-        padding: 1.15rem 1.3rem;
-    }
-    .ai-subsection-title {
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: #64748b;
-        margin-bottom: 0.75rem;
-    }
-    /* Strength badges */
-    .strength-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        background: rgba(16,185,129,0.10);
-        border: 1px solid rgba(16,185,129,0.28);
-        color: #065f46;
-        font-size: 0.82rem;
-        font-weight: 600;
-        padding: 0.4rem 0.85rem;
-        border-radius: 2rem;
-        transition: transform 0.15s ease;
-    }
-    .strength-badge:hover { transform: translateY(-1px); }
-    /* Weakness cards */
-    .weakness-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        background: rgba(245,158,11,0.09);
-        border: 1px solid rgba(245,158,11,0.28);
-        color: #92400e;
-        font-size: 0.82rem;
-        font-weight: 600;
-        padding: 0.4rem 0.85rem;
-        border-radius: 2rem;
-    }
-    /* Revision time badge */
-    .revision-time-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: rgba(59,130,246,0.08);
-        border: 1px solid rgba(59,130,246,0.20);
-        border-radius: 0.65rem;
-        padding: 0.75rem 1.15rem;
-        font-size: 0.92rem;
-        color: #1e40af;
-    }
-    .revision-time-badge strong {
-        font-size: 1.05rem;
-        font-weight: 800;
-    }
-    /* Study strategy box */
-    .strategy-box {
-        background: #f8fafc;
-        border: 1px solid rgba(148,163,184,0.22);
-        border-left: 4px solid #3b82f6;
-        border-radius: 0.65rem;
-        padding: 1rem 1.2rem;
-        font-size: 0.91rem;
+        font-size: 0.83rem;
         color: #334155;
-        line-height: 1.65;
+        font-weight: 500;
     }
-    /* Motivation card */
-    .motivation-card {
-        background: linear-gradient(135deg, rgba(16,185,129,0.07), rgba(5,150,105,0.04));
-        border: 1px solid rgba(16,185,129,0.20);
-        border-radius: 0.85rem;
-        padding: 1.3rem 1.5rem;
-    }
-    /* Numbered priority list */
-    .priority-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    .priority-list li {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.7rem;
-        font-size: 0.88rem;
-        color: #334155;
-    }
-    .priority-num {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.6rem;
-        height: 1.6rem;
+
+    .insight-item .dot {
+        width: 0.55rem;
+        height: 0.55rem;
         border-radius: 50%;
-        background: rgba(99,102,241,0.12);
-        color: #4f46e5;
-        font-size: 0.75rem;
-        font-weight: 800;
         flex-shrink: 0;
-        margin-top: 0.05rem;
     }
-    /* Gap bullet list */
+
+    .insight-item.strength .dot {
+        background: #10b981;
+    }
+
+    .insight-item.weakness .dot {
+        background: #f59e0b;
+    }
+
+    .insight-item.critical .dot {
+        background: #ef4444;
+    }
+
+    /* Knowledge gaps */
     .gap-list {
         list-style: none;
         margin: 0;
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
+        gap: 0.35rem;
     }
+
     .gap-list li {
-        font-size: 0.88rem;
+        font-size: 0.84rem;
         color: #475569;
         padding-left: 1.1rem;
         position: relative;
+        line-height: 1.5;
     }
+
     .gap-list li::before {
-        content: '•';
+        content: '';
         position: absolute;
-        left: 0;
-        color: #94a3b8;
+        left: 0.2rem;
+        top: 0.5rem;
+        width: 0.38rem;
+        height: 0.38rem;
+        border-radius: 50%;
+        background: #cbd5e1;
     }
-    /* AI unavailable warning */
-    .ai-warning-box {
+
+    /* Priority list */
+    .priority-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.6rem 0.85rem;
+        background: #fff;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 0.55rem;
+        font-size: 0.84rem;
+        color: #334155;
+    }
+
+    .priority-num {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: rgba(99, 102, 241, 0.1);
+        color: #4f46e5;
+        font-size: 0.72rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 0.05rem;
+    }
+
+    /* Study strategy */
+    .strategy-box {
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-left: 3px solid #3b82f6;
+        border-radius: 0.6rem;
+        padding: 0.9rem 1.1rem;
+        font-size: 0.85rem;
+        color: #334155;
+        line-height: 1.7;
+    }
+
+    /* Revision time */
+    .rev-time-card {
+        background: rgba(59, 130, 246, 0.05);
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        border-radius: 0.6rem;
+        padding: 0.85rem 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .rev-time-value {
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: #1d4ed8;
+        line-height: 1;
+    }
+
+    .rev-time-note {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: 0.15rem;
+    }
+
+    /* Coach note */
+    .coach-card {
+        background: rgba(16, 185, 129, 0.04);
+        border: 1px solid rgba(16, 185, 129, 0.18);
+        border-radius: 0.65rem;
+        padding: 1rem 1.15rem;
+    }
+
+    /* AI warning */
+    .ai-warn {
         background: #fefce8;
         border: 1px solid #fde68a;
-        border-radius: 0.65rem;
-        padding: 0.9rem 1.1rem;
-        font-size: 0.88rem;
+        border-radius: 0.6rem;
+        padding: 0.8rem 1rem;
+        font-size: 0.84rem;
         color: #92400e;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* CTA row */
+    .cta-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 2.5rem;
     }
 </style>
 
-<!-- ── Results Header ── -->
+{# ── 1. RESULT HEADER ───────────────────────────────────────────────── #}
 <div class="row g-4 mb-4">
     <div class="col-12">
-        {% if test.percentage >= 70.0 %}
-        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #10b981, #059669);">
+        {% if test.percentage >= 90 %}
+        <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#10b981,#059669);">
             <div class="card-body p-4 p-md-5 text-center">
-                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-success fw-semibold">Passed</span>
-                <h1 class="display-5 fw-bold mb-2">Excellent Revision!</h1>
-                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <h1 class="display-5 fw-bold mb-2">Outstanding Performance</h1>
+                <p class="lead mb-4">
+                    You scored
+                    <strong>{{ test.score }}</strong>
+                    /
+                    <strong>{{ test.total_questions }}</strong>
+                    &mdash;
+                    <strong>{{ test.percentage }}%</strong>
+                </p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
         </div>
-        {% elif test.percentage >= 40.0 %}
-        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        {% elif test.percentage >= 70 %}
+        <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#22c55e,#16a34a);">
             <div class="card-body p-4 p-md-5 text-center">
-                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-warning fw-semibold">Good Effort</span>
-                <h1 class="display-5 fw-bold mb-2">Well Done!</h1>
-                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <h1 class="display-5 fw-bold mb-2">Interview Ready</h1>
+                <p class="lead mb-4">
+                    You scored
+                    <strong>{{ test.score }}</strong>
+                    /
+                    <strong>{{ test.total_questions }}</strong>
+                    &mdash;
+                    <strong>{{ test.percentage }}%</strong>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
+                </div>
+            </div>
+        </div>
+        {% elif test.percentage >= 50 %}
+        <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <div class="card-body p-4 p-md-5 text-center">
+                <h1 class="display-5 fw-bold mb-2">Good Progress</h1>
+                <p class="lead mb-4">
+                    You scored
+                    <strong>{{ test.score }}</strong>
+                    /
+                    <strong>{{ test.total_questions }}</strong>
+                    &mdash;
+                    <strong>{{ test.percentage }}%</strong>
+                </p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Practice Again</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="card border-0 shadow-sm text-white" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        {% elif test.percentage >= 30 %}
+        <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#f97316,#ea580c);">
             <div class="card-body p-4 p-md-5 text-center">
-                <span class="badge rounded-pill text-bg-light px-3 py-2 mb-3 text-danger fw-semibold">Keep Practicing</span>
-                <h1 class="display-5 fw-bold mb-2">Don't Give Up!</h1>
-                <p class="lead mb-4">You scored <strong>{{ test.score }}</strong> out of <strong>{{ test.total_questions }}</strong> questions (<strong>{{ test.percentage }}%</strong>).</p>
+                <h1 class="display-5 fw-bold mb-2">Needs Improvement</h1>
+                <p class="lead mb-4">
+                    You scored
+                    <strong>{{ test.score }}</strong>
+                    /
+                    <strong>{{ test.total_questions }}</strong>
+                    &mdash;
+                    <strong>{{ test.percentage }}%</strong>
+                </p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Try Again</a>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
+            <div class="card-body p-4 p-md-5 text-center">
+                <h1 class="display-5 fw-bold mb-2">Foundation Needs Work</h1>
+                <p class="lead mb-4">
+                    You scored
+                    <strong>{{ test.score }}</strong>
+                    /
+                    <strong>{{ test.total_questions }}</strong>
+                    &mdash;
+                    <strong>{{ test.percentage }}%</strong>
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Start Over</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
                 </div>
             </div>
@@ -273,169 +567,275 @@
     </div>
 </div>
 
-<!-- ── Summary stats card ── -->
-{% with idk_count=0 wrong_count=0 %}
-{% comment %}Compute counts in template using questions_data{% endcomment %}
-<div class="card border-0 shadow-sm mb-5">
+{# ── 2. PERFORMANCE SUMMARY TILES ───────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4 p-md-5">
         <h2 class="h5 fw-bold mb-4 text-dark">Performance Summary</h2>
-        <div class="row g-3">
 
-            <!-- Correct -->
-            <div class="col-sm-6 col-xl-3">
-                <div class="summary-stat">
-                    <div class="summary-stat-icon green">✓</div>
-                    <div class="summary-stat-body">
-                        <div class="summary-stat-label">Correct</div>
-                        <div class="summary-stat-value green">
-                            {% with c=0 %}
-                            {{ test.score }}
-                            {% endwith %}
-                        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-xl-3">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon green">C</div>
+                    <div>
+                        <div class="stat-tile-label">Correct</div>
+                        <div class="stat-tile-value green">{{ test.score }}</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Wrong -->
-            <div class="col-sm-6 col-xl-3">
-                <div class="summary-stat">
-                    <div class="summary-stat-icon red">✗</div>
-                    <div class="summary-stat-body">
-                        <div class="summary-stat-label">Wrong</div>
-                        <div class="summary-stat-value red" id="stat-wrong">
-                            {% with wrong=0 %}
-                            {% for item in questions_data %}{% if not item.is_correct and item.selected_option != 'X' %}{% with wrong=wrong|add:1 %}{% endwith %}{% endif %}{% endfor %}
-                            {{ questions_data|length|add:"-1"|add:"1" }}
-                            {% endwith %}
-                        </div>
+            <div class="col-6 col-xl-3">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon red">W</div>
+                    <div>
+                        <div class="stat-tile-label">Wrong</div>
+                        <div class="stat-tile-value red" id="stat-wrong">&mdash;</div>
                     </div>
                 </div>
             </div>
-
-            <!-- I Don't Know -->
-            <div class="col-sm-6 col-xl-3">
-                <div class="summary-stat">
-                    <div class="summary-stat-icon yellow">?</div>
-                    <div class="summary-stat-body">
-                        <div class="summary-stat-label">I Don't Know</div>
-                        <div class="summary-stat-value yellow" id="stat-idk-val">—</div>
+            <div class="col-6 col-xl-3">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon yellow">?</div>
+                    <div>
+                        <div class="stat-tile-label">Skipped</div>
+                        <div class="stat-tile-value yellow" id="stat-idk">&mdash;</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Score -->
-            <div class="col-sm-6 col-xl-3">
-                <div class="summary-stat">
-                    <div class="summary-stat-icon blue">%</div>
-                    <div class="summary-stat-body">
-                        <div class="summary-stat-label">Score</div>
-                        <div class="summary-stat-value blue">{{ test.score }}&thinsp;/&thinsp;{{ test.total_questions }}</div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Percentage row -->
-        <div class="row g-3 mt-0">
-            <div class="col-12">
-                <div class="summary-stat">
-                    <div class="summary-stat-icon blue" style="width:auto;padding:0 0.5rem;border-radius:0.5rem;font-size:0.85rem;font-weight:700;color:#2563eb;">PCT</div>
-                    <div class="summary-stat-body d-flex align-items-center gap-3">
-                        <div>
-                            <div class="summary-stat-label">Percentage</div>
-                            <div class="summary-stat-value blue">{{ test.percentage }}%</div>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="progress" style="height:8px;border-radius:4px;">
-                                <div class="progress-bar
-                                    {% if test.percentage >= 70 %}bg-success{% elif test.percentage >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
-                                    role="progressbar"
-                                    style="width: {{ test.percentage }}%"
-                                    aria-valuenow="{{ test.percentage }}"
-                                    aria-valuemin="0"
-                                    aria-valuemax="100">
-                                </div>
-                            </div>
+            <div class="col-6 col-xl-3">
+                <div class="stat-tile">
+                    <div class="stat-tile-icon blue">%</div>
+                    <div>
+                        <div class="stat-tile-label">Score</div>
+                        <div class="stat-tile-value blue">{{ test.score }}&thinsp;/&thinsp;{{ test.total_questions }}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        {# Interview Readiness progress bar #}
+        <div class="stat-tile">
+            <div class="stat-tile-icon blue"
+                style="width:auto;padding:0 0.55rem;border-radius:0.4rem;font-size:0.75rem;">IR</div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="stat-tile-label">Interview Readiness</span>
+                    <span class="stat-tile-label" style="color:#1e293b;">{{ test.percentage }}%</span>
+                </div>
+                <div class="progress" style="height:7px;border-radius:4px;">
+                    <div class="progress-bar {% if test.percentage >= 70 %}bg-success{% elif test.percentage >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                        role="progressbar" style="width:{{ test.percentage }}%" aria-valuenow="{{ test.percentage }}"
+                        aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endwith %}
 
-<!-- Hidden data for JS to compute wrong/idk accurately -->
-<script id="result-data" type="application/json">
-[{% for item in questions_data %}{"correct":{{ item.is_correct|yesno:"true,false" }},"option":"{{ item.selected_option }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
-</script>
+{# ── 3. DIFFICULTY BREAKDOWN ────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2 class="h5 fw-bold mb-0 text-dark">Difficulty Performance</h2>
+        </div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     AI Performance Analysis
-     ══════════════════════════════════════════════════════════════════ -->
-<div class="card border-0 shadow-sm mb-5" id="ai-analysis-section">
+        {% with easy=difficulty_breakdown.easy medium=difficulty_breakdown.medium hard=difficulty_breakdown.hard %}
+
+        {# Easy #}
+        {% if easy.total %}
+        <div class="diff-row">
+            <div class="diff-label-col">Easy</div>
+            <div class="diff-bar-col">
+                <div class="diff-bar-track">
+                    <div class="diff-bar-fill {% if easy.accuracy >= 70 %}green{% elif easy.accuracy >= 40 %}yellow{% else %}red{% endif %}"
+                        style="width:{{ easy.accuracy }}%;"></div>
+                </div>
+            </div>
+            <div class="diff-meta-col text-muted">{{ easy.correct }}&thinsp;/&thinsp;{{ easy.total }} correct</div>
+            <div
+                class="diff-pct-col {% if easy.accuracy >= 70 %}text-success{% elif easy.accuracy >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                {{ easy.accuracy }}%
+            </div>
+        </div>
+        {% endif %}
+
+        {# Medium #}
+        {% if medium.total %}
+        <div class="diff-row">
+            <div class="diff-label-col">Medium</div>
+            <div class="diff-bar-col">
+                <div class="diff-bar-track">
+                    <div class="diff-bar-fill {% if medium.accuracy >= 70 %}green{% elif medium.accuracy >= 40 %}yellow{% else %}red{% endif %}"
+                        style="width:{{ medium.accuracy }}%;"></div>
+                </div>
+            </div>
+            <div class="diff-meta-col text-muted">{{ medium.correct }}&thinsp;/&thinsp;{{ medium.total }} correct</div>
+            <div
+                class="diff-pct-col {% if medium.accuracy >= 70 %}text-success{% elif medium.accuracy >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                {{ medium.accuracy }}%
+            </div>
+        </div>
+        {% endif %}
+
+        {# Hard #}
+        {% if hard.total %}
+        <div class="diff-row">
+            <div class="diff-label-col">Hard</div>
+            <div class="diff-bar-col">
+                <div class="diff-bar-track">
+                    <div class="diff-bar-fill {% if hard.accuracy >= 70 %}green{% elif hard.accuracy >= 40 %}yellow{% else %}red{% endif %}"
+                        style="width:{{ hard.accuracy }}%;"></div>
+                </div>
+            </div>
+            <div class="diff-meta-col text-muted">{{ hard.correct }}&thinsp;/&thinsp;{{ hard.total }} correct</div>
+            <div
+                class="diff-pct-col {% if hard.accuracy >= 70 %}text-success{% elif hard.accuracy >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                {{ hard.accuracy }}%
+            </div>
+        </div>
+        {% endif %}
+
+        {% endwith %}
+    </div>
+</div>
+
+{# ── 4. SUBTOPIC BREAKDOWN ──────────────────────────────────────────── #}
+{% if subtopic_breakdown %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-4 p-md-5">
+        <h2 class="h5 fw-bold mb-4 text-dark">Subtopic Breakdown</h2>
+        <div class="table-responsive">
+            <table class="subtopic-table">
+                <thead>
+                    <tr>
+                        <th>Subtopic</th>
+                        <th class="text-center">Correct</th>
+                        <th class="text-center">Wrong</th>
+                        <th class="text-center">Skipped</th>
+                        <th class="text-end">Accuracy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, data in subtopic_breakdown.items %}
+                    <tr>
+                        <td class="fw-medium">{{ name }}</td>
+                        <td class="text-center text-success fw-semibold">{{ data.correct }}</td>
+                        <td class="text-center text-danger fw-semibold">{{ data.wrong }}</td>
+                        <td class="text-center text-secondary">{{ data.unknown }}</td>
+                        <td class="text-end">
+                            <span
+                                class="acc-badge {% if data.accuracy >= 70 %}high{% elif data.accuracy >= 40 %}medium{% else %}low{% endif %}">
+                                {{ data.accuracy }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── 5. AI PERFORMANCE ANALYSIS ─────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4" id="ai-analysis-section">
     <div class="card-body p-4 p-md-5">
 
-        <!-- Section header -->
         <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-            <div class="ai-section-header">
-                <h2 class="h5 fw-bold mb-0 text-dark">AI Performance Analysis</h2>
-                <span class="ai-badge-label">AI</span>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h5 fw-bold mb-0 text-dark">Personalized Performance Analysis</h2>
+                <span class="ai-chip">AI</span>
             </div>
             <span class="text-secondary small">Personalised revision guidance</span>
         </div>
 
         {% if analysis %}
 
-        <!-- ── 1. Performance Summary ──────────────────────────────── -->
-        <div class="ai-perf-card mb-4">
-            <div class="ai-subsection-title">📊 Overall Performance</div>
-            <p class="mb-0 text-dark" style="font-size:0.93rem;line-height:1.7;">
-                {{ analysis.performance_summary }}
-            </p>
-        </div>
-
-        <div class="row g-4 mb-4">
-
-            <!-- ── 2. Strengths ─────────────────────────────────────── -->
-            <div class="col-md-6">
-                <div class="ai-subsection-title">✅ Key Strengths</div>
-                {% if analysis.strengths %}
-                <div class="d-flex flex-wrap gap-2">
-                    {% for s in analysis.strengths %}
-                    <span class="strength-badge">
-                        <span style="color:#10b981;font-weight:800;">✓</span> {{ s }}
-                    </span>
-                    {% endfor %}
+        {# 5.1 Overall Performance banner #}
+        <div class="perf-banner mb-4 flex-column align-items-start gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="perf-banner-score">{{ test.percentage|floatformat:0 }}%</div>
+                <div>
+                    <div class="text-secondary small fw-semibold text-uppercase"
+                        style="font-size: 0.68rem; letter-spacing: 0.05em; line-height: 1;">Interview Readiness</div>
+                    <div class="perf-banner-tag mt-1">
+                        {% if test.percentage >= 90 %}Outstanding Performance
+                        {% elif test.percentage >= 70 %}Interview Ready
+                        {% elif test.percentage >= 50 %}Good Progress
+                        {% elif test.percentage >= 30 %}Needs Improvement
+                        {% else %}Foundation Needs Work{% endif %}
+                    </div>
                 </div>
-                {% else %}
-                <p class="text-secondary small mb-0">No specific strengths detected.</p>
-                {% endif %}
             </div>
-
-            <!-- ── 3. Weak Areas ────────────────────────────────────── -->
-            <div class="col-md-6">
-                <div class="ai-subsection-title">⚠️ Weak Areas</div>
-                {% if analysis.weaknesses %}
-                <div class="d-flex flex-wrap gap-2">
-                    {% for w in analysis.weaknesses %}
-                    <span class="weakness-pill">
-                        <span style="font-weight:800;">!</span> {{ w }}
-                    </span>
+            <div class="w-100 border-top pt-3" style="border-top: 1px solid rgba(99, 102, 241, 0.15) !important;">
+                <ul class="gap-list mb-0">
+                    {% for line in analysis.performance_summary.splitlines %}
+                    {% if line.strip %}
+                    <li>{{ line }}</li>
+                    {% endif %}
                     {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-secondary small mb-0">No weak areas identified.</p>
-                {% endif %}
+                </ul>
             </div>
         </div>
 
-        <!-- ── 4. Knowledge Gaps ──────────────────────────────────── -->
+        {# 5.2 Strengths + Weak Areas — grid layout #}
+        <div class="mb-4">
+            <div class="ai-subsection">Key Strengths</div>
+            <div class="row g-2 mb-4">
+                {% for s in processed_strengths %}
+                <div class="col-sm-6">
+                    <div class="card p-3 h-100 border-0 shadow-sm"
+                        style="background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.12) !important;">
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">{{ s.topic }}</div>
+                        {% if s.accuracy is not None %}
+                        <div class="text-success small fw-semibold mb-2" style="font-size: 0.8rem;">
+                            ✓ Accuracy: {{ s.accuracy|floatformat:0 }}%
+                        </div>
+                        {% endif %}
+                        <div class="text-secondary" style="font-size: 0.82rem; line-height: 1.4;">{{ s.description }}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-secondary small mb-0">No specific strengths identified.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="ai-subsection">Weak Areas</div>
+            <div class="row g-2 mb-4">
+                {% for w in processed_weaknesses %}
+                <div class="col-sm-6">
+                    <div class="card p-3 h-100 border-0 shadow-sm"
+                        style="background: rgba(239, 68, 68, 0.02); border: 1px solid rgba(239, 68, 68, 0.1) !important;">
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">{{ w.topic }}</div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            {% if w.accuracy is not None %}
+                            <span class="text-danger small fw-semibold" style="font-size: 0.8rem;">{{ w.accuracy|floatformat:0 }}%</span>
+                            {% endif %}
+                            <span
+                                class="badge {% if w.severity == 'Critical' %}bg-danger-subtle text-danger{% elif w.severity == 'Needs Revision' %}bg-warning-subtle text-warning-emphasis{% else %}bg-secondary-subtle text-secondary{% endif %}"
+                                style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">
+                                {{ w.severity }}
+                            </span>
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.82rem; line-height: 1.4;">{{ w.description }}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-secondary small mb-0">No weak areas identified.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# 5.3 Knowledge Gaps #}
         {% if analysis.knowledge_gaps %}
         <div class="mb-4">
-            <div class="ai-subsection-title">🔍 Knowledge Gaps</div>
+            <div class="ai-subsection">Knowledge Gaps</div>
             <ul class="gap-list">
                 {% for gap in analysis.knowledge_gaps %}
                 <li>{{ gap }}</li>
@@ -444,134 +844,196 @@
         </div>
         {% endif %}
 
-        <!-- ── 5. Revision Priority ───────────────────────────────── -->
-        {% if analysis.revision_priority %}
+        {# 5.4 Revision Priority #}
+        {% if processed_priorities %}
         <div class="mb-4">
-            <div class="ai-subsection-title">🎯 Revision Priority</div>
-            <ol class="priority-list">
-                {% for item in analysis.revision_priority %}
-                <li>
-                    <span class="priority-num">{{ forloop.counter }}</span>
-                    <span>{{ item }}</span>
-                </li>
+            <div class="ai-subsection">Revision Priorities</div>
+            <div class="row g-2">
+                {% for p in processed_priorities %}
+                <div class="col-sm-6 col-md-4">
+                    <div class="card p-3 h-100 border-0 shadow-sm"
+                        style="border: 1px solid rgba(148, 163, 184, 0.16) !important;">
+                        <div class="text-secondary small fw-bold text-uppercase mb-1"
+                            style="font-size: 0.65rem; letter-spacing: 0.05em;">Priority {{ p.num }}</div>
+                        <div class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">{{ p.topic }}</div>
+                        <div class="text-secondary" style="font-size: 0.8rem; line-height: 1.4;">
+                            <span class="fw-semibold text-dark-emphasis">Reason:</span> {{ p.description }}
+                        </div>
+                    </div>
+                </div>
                 {% endfor %}
-            </ol>
+            </div>
         </div>
         {% endif %}
 
-        <!-- ── 6. Study Strategy ──────────────────────────────────── -->
+        {# 5.5 Study Strategy #}
         <div class="mb-4">
-            <div class="ai-subsection-title">📚 Recommended Study Strategy</div>
-            <div class="strategy-box">{{ analysis.study_strategy }}</div>
-        </div>
-
-        <!-- ── 7. Estimated Revision Time ────────────────────────── -->
-        <div class="mb-4">
-            <div class="ai-subsection-title">⏱️ Estimated Revision Time</div>
-            <div class="revision-time-badge">
-                <span>🗓️</span>
-                <strong>{{ analysis.estimated_revision_time }}</strong>
+            <div class="ai-subsection">Study Strategy</div>
+            <div class="strategy-box p-3"
+                style="background: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-left: 3px solid #3b82f6; border-radius: 0.6rem;">
+                {% if strategy_items %}
+                <div class="d-flex flex-column gap-2">
+                    {% for item in strategy_items %}
+                    <div class="d-flex align-items-center gap-2">
+                        <div
+                            style="width: 1rem; height: 1rem; border: 1.5px solid #cbd5e1; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff;">
+                        </div>
+                        <span class="text-secondary" style="font-size: 0.85rem;">{{ item }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-secondary" style="font-size: 0.85rem;">{{ analysis.study_strategy }}</div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- ── 8. Motivation ─────────────────────────────────────── -->
-        <div class="motivation-card">
-            <div class="d-flex align-items-start gap-3">
-                <span style="font-size:1.5rem;line-height:1;">💪</span>
-                <div>
-                    <div class="ai-subsection-title mb-1">A Note From Your AI Coach</div>
-                    <p class="mb-0 text-dark" style="font-size:0.91rem;line-height:1.7;">
-                        {{ analysis.motivation }}
-                    </p>
+        {# 5.6 Estimated Revision Time ─ computed from backend #}
+        <div class="mb-4">
+            <div class="ai-subsection">Estimated Revision Time</div>
+            <div class="rev-time-card d-flex flex-column align-items-start gap-2">
+                <div class="rev-time-value">{{ estimated_revision }}</div>
+                <div class="text-secondary w-100 border-top pt-2"
+                    style="font-size: 0.75rem; border-top: 1px solid rgba(59, 130, 246, 0.15) !important;">
+                    <span class="fw-semibold text-dark-emphasis">Based on:</span>
+                    <ul class="mb-0 ps-3 mt-1 text-muted" style="list-style-type: disc;">
+                        <li>Incorrect questions</li>
+                        <li>Skipped questions</li>
+                        <li>Difficulty distribution</li>
+                    </ul>
                 </div>
             </div>
         </div>
 
+        {# 5.7 Coach's Note #}
+        <div class="coach-card">
+            <div class="ai-subsection mb-1">Coach's Note</div>
+            <p class="mb-0 text-dark" style="font-size:0.85rem;line-height:1.65;">{{ analysis.motivation }}</p>
+        </div>
+
         {% elif analysis is None %}
-        <!-- AI failed — warn without breaking the page -->
-        <div class="ai-warning-box d-flex align-items-center gap-2">
-            <span>⚠️</span>
-            <span>
-                AI analysis is currently unavailable. Please try again later.
-            </span>
+        <div class="ai-warn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"
+                aria-hidden="true">
+                <path
+                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+            </svg>
+            AI analysis is currently unavailable. Please try again later.
         </div>
 
         {% else %}
-        <!-- analysis == {} — should not normally appear once Phase 6.4 is active -->
         <p class="text-secondary small mb-0">AI analysis is not available for this test.</p>
         {% endif %}
 
     </div>
 </div>
 
-<!-- ── Detailed Revision Breakdown ── -->
-<h2 class="h4 fw-bold mb-4 text-dark">Revision Breakdown</h2>
+
+{# ── 6. PRACTICE WEAK AREAS CTA ─────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4" style="border:1px dashed rgba(148,163,184,0.35) !important;">
+    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <div class="fw-semibold text-dark mb-1">Practice Weak Areas</div>
+            <p class="text-secondary small mb-0">Targeted drills on your low-accuracy subtopics.</p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm px-4" disabled>
+            Coming Soon
+        </button>
+    </div>
+</div>
+
+{# ── 7. REVISION BREAKDOWN ──────────────────────────────────────────── #}
+<h2 class="h5 fw-bold mb-4 text-dark">Revision Breakdown</h2>
 
 <div class="d-flex flex-column gap-4">
     {% for item in questions_data %}
-    <div class="card border-0 shadow-sm rounded-4">
+    <div class="card border-0 shadow-sm">
         <div class="card-body p-4 p-md-5">
 
+            {# Question header #}
             <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4 flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="badge bg-light text-secondary border px-3 py-2 fw-semibold">
-                        Question {{ item.order }}
-                    </span>
+                    <span class="badge bg-light text-secondary border px-2 py-1 fw-semibold">Q{{ item.order }}</span>
                     {% if item.is_correct %}
-                    <span class="badge text-bg-success result-badge">✓ Correct</span>
+                    <span class="badge text-bg-success result-badge">Correct</span>
                     {% elif item.selected_option == 'X' %}
-                    <span class="badge text-bg-warning result-badge">? I Don't Know</span>
+                    <span class="badge text-bg-warning result-badge">Skipped</span>
                     {% else %}
-                    <span class="badge text-bg-danger result-badge">✗ Incorrect</span>
+                    <span class="badge text-bg-danger result-badge">Incorrect</span>
                     {% endif %}
                 </div>
-                <span class="badge bg-light text-secondary border px-2 py-1 small text-capitalize">
-                    {{ item.question.get_difficulty_display }}
-                </span>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if item.question.subtopic %}
+                    <span class="badge bg-light text-secondary border px-2 py-1 small">{{ item.question.subtopic.name }}</span>
+                    {% endif %}
+                    <span class="badge bg-light text-secondary border px-2 py-1 small text-capitalize">{{ item.question.get_difficulty_display }}</span>
+                </div>
             </div>
 
-            <p class="fs-5 fw-medium text-dark mb-4">{{ item.question.question }}</p>
+            {# Question text #}
+            <p class="fw-medium text-dark mb-4" style="font-size:0.95rem;">{{ item.question.question }}</p>
 
-            <div class="d-flex flex-column gap-3 mb-4">
-                <!-- A -->
-                <div class="option-item d-flex align-items-center justify-content-between
+            {# Options #}
+            <div class="d-flex flex-column gap-2 mb-4">
+                {% with opts="ABCD" %}
+
+                {# Option A #}
+                <div
+                    class="option-item d-flex align-items-center justify-content-between
                     {% if item.question.correct_option == 'A' %}option-correct{% elif item.selected_option == 'A' and not item.is_correct %}option-incorrect{% endif %}">
                     <span><strong>A.</strong> {{ item.question.option_a }}</span>
-                    {% if item.question.correct_option == 'A' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
-                    {% elif item.selected_option == 'A' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                    {% if item.question.correct_option == 'A' %}<span class="small fw-semibold text-success">Correct
+                        Answer</span>
+                    {% elif item.selected_option == 'A' %}<span class="small fw-semibold text-danger">Your
+                        Choice</span>{% endif %}
                 </div>
-                <!-- B -->
-                <div class="option-item d-flex align-items-center justify-content-between
+
+                {# Option B #}
+                <div
+                    class="option-item d-flex align-items-center justify-content-between
                     {% if item.question.correct_option == 'B' %}option-correct{% elif item.selected_option == 'B' and not item.is_correct %}option-incorrect{% endif %}">
                     <span><strong>B.</strong> {{ item.question.option_b }}</span>
-                    {% if item.question.correct_option == 'B' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
-                    {% elif item.selected_option == 'B' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                    {% if item.question.correct_option == 'B' %}<span class="small fw-semibold text-success">Correct
+                        Answer</span>
+                    {% elif item.selected_option == 'B' %}<span class="small fw-semibold text-danger">Your
+                        Choice</span>{% endif %}
                 </div>
-                <!-- C -->
-                <div class="option-item d-flex align-items-center justify-content-between
+
+                {# Option C #}
+                <div
+                    class="option-item d-flex align-items-center justify-content-between
                     {% if item.question.correct_option == 'C' %}option-correct{% elif item.selected_option == 'C' and not item.is_correct %}option-incorrect{% endif %}">
                     <span><strong>C.</strong> {{ item.question.option_c }}</span>
-                    {% if item.question.correct_option == 'C' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
-                    {% elif item.selected_option == 'C' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                    {% if item.question.correct_option == 'C' %}<span class="small fw-semibold text-success">Correct
+                        Answer</span>
+                    {% elif item.selected_option == 'C' %}<span class="small fw-semibold text-danger">Your
+                        Choice</span>{% endif %}
                 </div>
-                <!-- D -->
-                <div class="option-item d-flex align-items-center justify-content-between
+
+                {# Option D #}
+                <div
+                    class="option-item d-flex align-items-center justify-content-between
                     {% if item.question.correct_option == 'D' %}option-correct{% elif item.selected_option == 'D' and not item.is_correct %}option-incorrect{% endif %}">
                     <span><strong>D.</strong> {{ item.question.option_d }}</span>
-                    {% if item.question.correct_option == 'D' %}<span class="small fw-semibold text-success">✓ Correct Answer</span>
-                    {% elif item.selected_option == 'D' %}<span class="small fw-semibold text-danger">✗ Your Choice</span>{% endif %}
+                    {% if item.question.correct_option == 'D' %}<span class="small fw-semibold text-success">Correct
+                        Answer</span>
+                    {% elif item.selected_option == 'D' %}<span class="small fw-semibold text-danger">Your
+                        Choice</span>{% endif %}
                 </div>
+
+                {% endwith %}
 
                 {% if item.selected_option == 'X' %}
                 <div class="p-2 bg-light rounded-3 text-secondary small d-flex align-items-center gap-2 border">
                     <span class="fw-bold">?</span>
-                    <span>You selected <strong>X — I Don't Know</strong> for this question.</span>
+                    <span>You selected <strong>X &mdash; I Don't Know</strong> for this question.</span>
                 </div>
                 {% endif %}
             </div>
 
+            {# Explanation #}
             {% if item.question.explanation %}
-            <div class="p-4 rounded-3 explanation-box">
+            <div class="explanation-box">
                 <h5 class="h6 fw-bold text-dark mb-2">Answer Rationale</h5>
                 <p class="text-secondary small mb-0">{{ item.question.explanation }}</p>
             </div>
@@ -582,32 +1044,39 @@
     {% endfor %}
 </div>
 
-<div class="d-flex justify-content-center gap-3 mt-5 flex-wrap">
+{# ── 8. BOTTOM CTA ──────────────────────────────────────────────────── #}
+<div class="cta-area">
     <a href="{% url 'mcq_setup' %}" class="btn btn-primary btn-lg px-4">New Practice Session</a>
     <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Back to Dashboard</a>
 </div>
+
+{# Hidden JSON for JS wrong/skipped counter #}
+<script id="result-data" type="application/json">
+[{% for item in questions_data %}{"correct":{{ item.is_correct|yesno:"true,false" }},"option":"{{ item.selected_option }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+</script>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-(function () {
-    'use strict';
-    var raw = document.getElementById('result-data');
-    if (!raw) return;
-    try {
-        var data = JSON.parse(raw.textContent);
-        var wrong = 0, idk = 0;
-        data.forEach(function (d) {
-            if (!d.correct && d.option === 'X') idk++;
-            else if (!d.correct) wrong++;
-        });
-        var wrongEl = document.getElementById('stat-wrong');
-        var idkEl   = document.getElementById('stat-idk-val');
-        if (wrongEl) wrongEl.textContent = wrong;
-        if (idkEl)   idkEl.textContent   = idk;
-    } catch (e) {
-        console.warn('[MCQ Results] Could not parse result data:', e);
-    }
-})();
+    (function () {
+        'use strict';
+        var raw = document.getElementById('result-data');
+        if (!raw) return;
+        try {
+            var data = JSON.parse(raw.textContent);
+            var wrong = 0, idk = 0;
+            data.forEach(function (d) {
+                if (!d.correct && d.option === 'X') idk++;
+                else if (!d.correct) wrong++;
+            });
+            var wrongEl = document.getElementById('stat-wrong');
+            var idkEl = document.getElementById('stat-idk');
+            if (wrongEl) wrongEl.textContent = wrong;
+            if (idkEl) idkEl.textContent = idk;
+        } catch (e) {
+            console.warn('[MCQ Results] Could not parse result data:', e);
+        }
+    })();
 </script>
 {% endblock %}
