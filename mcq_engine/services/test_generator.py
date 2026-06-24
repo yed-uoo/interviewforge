@@ -3,15 +3,21 @@ mcq_engine.services.test_generator
 ====================================
 Public API
 ----------
-    generate_test(topic_id, question_count) -> List[Question]
+    generate_test(topic_id, question_count, experience_level) -> List[Question]
 
 Algorithm
 ---------
 Phase 1 – Difficulty budget
-    Compute how many easy / medium / hard questions to draw from the pool:
-        easy   = 40 % of question_count  (rounded)
-        medium = 30 % of question_count  (rounded)
-        hard   = remaining slots         (avoids rounding drift)
+    Compute how many easy / medium / hard questions to draw from the pool
+    based on the candidate's experience level:
+
+        FRESHER   : Easy 80%, Medium 20%, Hard  0%
+        JUNIOR    : Easy 60%, Medium 20%, Hard 20%
+        MID_LEVEL : Easy 50%, Medium 30%, Hard 20%
+        SENIOR    : Easy 40%, Medium 30%, Hard 30%
+
+    Rounding: floor each bucket, assign remainder to the largest bucket
+    (easy) so that sum(budget.values()) == question_count always.
 
 Phase 2 – Subtopic coverage (guarantee breadth)
     For every subtopic that has at least one question of the required
@@ -32,6 +38,8 @@ Constraints
 * Returns List[Question] (actual Django model instances, not dicts).
 * Raises ValueError for invalid inputs and InsufficientQuestionsError
   when the pool cannot satisfy the requested count.
+* Zero-sized buckets (e.g. hard for FRESHER) are skipped entirely —
+  no pool check and no InsufficientQuestionsError for those buckets.
 """
 
 from __future__ import annotations
@@ -41,6 +49,34 @@ import random
 from typing import List
 
 from mcq_engine.models import Question, Topic
+
+
+# ---------------------------------------------------------------------------
+# Experience-level difficulty profiles
+# ---------------------------------------------------------------------------
+
+DIFFICULTY_PROFILES: dict[str, dict[str, float]] = {
+    "FRESHER": {
+        "easy":   0.80,
+        "medium": 0.20,
+        "hard":   0.00,
+    },
+    "JUNIOR": {
+        "easy":   0.60,
+        "medium": 0.20,
+        "hard":   0.20,
+    },
+    "MID_LEVEL": {
+        "easy":   0.50,
+        "medium": 0.30,
+        "hard":   0.20,
+    },
+    "SENIOR": {
+        "easy":   0.40,
+        "medium": 0.30,
+        "hard":   0.30,
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -55,16 +91,38 @@ class InsufficientQuestionsError(Exception):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _compute_difficulty_budget(question_count: int) -> dict[str, int]:
+def _compute_difficulty_budget(question_count: int, experience_level: str) -> dict[str, int]:
     """
     Return the number of questions to draw for each difficulty level.
 
-    Distribution: 40 % easy, 30 % medium, 30 % hard.
-    The hard count absorbs any rounding remainder so the total is exact.
+    Uses the DIFFICULTY_PROFILES lookup for the given experience_level.
+    Rounding strategy:
+        1. Floor each bucket count.
+        2. Compute remainder = question_count - sum(floors).
+        3. Assign remainder to the bucket with the highest ratio (easy).
+    This guarantees sum(budget.values()) == question_count exactly.
+
+    Parameters
+    ----------
+    question_count : int
+        Total number of questions requested.
+    experience_level : str
+        One of FRESHER / JUNIOR / MID_LEVEL / SENIOR.
+
+    Returns
+    -------
+    dict mapping difficulty key (str) to count (int).
     """
-    easy_count   = round(question_count * 0.40)
-    medium_count = round(question_count * 0.30)
-    hard_count   = question_count - easy_count - medium_count  # absorb drift
+    profile = DIFFICULTY_PROFILES.get(experience_level, DIFFICULTY_PROFILES["FRESHER"])
+
+    easy_count   = math.floor(question_count * profile["easy"])
+    medium_count = math.floor(question_count * profile["medium"])
+    hard_count   = math.floor(question_count * profile["hard"])
+
+    # Assign rounding remainder to the largest bucket (easy).
+    remainder = question_count - (easy_count + medium_count + hard_count)
+    easy_count += remainder
+
     return {
         Question.Difficulty.EASY:   easy_count,
         Question.Difficulty.MEDIUM: medium_count,
@@ -159,9 +217,9 @@ def _select_questions(
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_test(topic_id: int, question_count: int) -> List[Question]:
+def generate_test(topic_id: int, question_count: int, experience_level: str) -> List[Question]:
     """
-    Generate a randomised test for the given topic.
+    Generate a randomised test for the given topic and experience level.
 
     Parameters
     ----------
@@ -170,6 +228,10 @@ def generate_test(topic_id: int, question_count: int) -> List[Question]:
     question_count : int
         Total number of questions to include in the test.
         Must be a positive integer.
+    experience_level : str
+        Candidate experience level. One of:
+        FRESHER / JUNIOR / MID_LEVEL / SENIOR.
+        Controls the easy / medium / hard distribution.
 
     Returns
     -------
@@ -184,13 +246,15 @@ def generate_test(topic_id: int, question_count: int) -> List[Question]:
     Topic.DoesNotExist
         If no Topic with the given pk exists.
     InsufficientQuestionsError
-        If any difficulty bucket has fewer questions than the computed budget.
+        If any non-zero difficulty bucket has fewer questions than needed.
+        Zero-sized buckets (e.g. hard for FRESHER) are skipped silently.
 
     Example
     -------
         from mcq_engine.services.test_generator import generate_test
 
-        questions = generate_test(topic_id=1, question_count=20)
+        questions = generate_test(topic_id=1, question_count=10, experience_level="FRESHER")
+        # Returns 8 easy + 2 medium, 0 hard
         for q in questions:
             print(q.difficulty, q.question[:60])
     """
@@ -207,10 +271,13 @@ def generate_test(topic_id: int, question_count: int) -> List[Question]:
     print("GENERATE TEST CALLED")
     print("TOPIC:", topic_obj.name)
     print("QUESTION COUNT:", question_count)
+    print("EXPERIENCE LEVEL:", experience_level)
     print("=" * 50)
 
     # --- Build difficulty budget ---
-    budget = _compute_difficulty_budget(question_count)
+    budget = _compute_difficulty_budget(question_count, experience_level)
+
+    print("BUDGET:", budget)
 
     # --- Fetch entire question pool in one query ---
     pool = _fetch_pool(topic_id)
@@ -219,6 +286,7 @@ def generate_test(topic_id: int, question_count: int) -> List[Question]:
     final_questions: list[Question] = []
 
     for difficulty, needed in budget.items():
+        # Skip zero-sized buckets (e.g. hard=0 for FRESHER) — no error raised.
         if needed == 0:
             continue
         candidates = pool[difficulty]

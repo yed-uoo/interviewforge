@@ -63,6 +63,7 @@
                     <tr class="text-secondary small">
                         <th>#</th>
                         <th>Topic</th>
+                        <th>Experience</th>
                         <th>Date</th>
                         <th>Questions</th>
                         <th>Score</th>
@@ -76,6 +77,9 @@
                         <td class="text-secondary small">{{ forloop.counter }}</td>
                         <td>
                             <span class="fw-semibold text-dark">{{ test.topic.name }}</span>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill text-bg-secondary" style="font-size:0.72rem;">{{ test.get_experience_level_display }}</span>
                         </td>
                         <td>
                             <span class="text-secondary small">{{ test.created_at|date:"M d, Y" }}</span>

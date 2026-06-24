@@ -255,6 +255,8 @@ def build_test_summary(test: MCQTest) -> dict[str, Any]:
         "topic":      test.topic.name,
         "generated_at": generated_at,
 
+        "experience_level": test.experience_level,
+
         "total_questions":    total_questions,
         "score":              correct,
         "correct":            correct,

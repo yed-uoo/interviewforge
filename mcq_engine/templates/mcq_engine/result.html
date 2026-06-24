@@ -477,7 +477,7 @@
         <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#10b981,#059669);">
             <div class="card-body p-4 p-md-5 text-center">
                 <h1 class="display-5 fw-bold mb-2">Outstanding Performance</h1>
-                <p class="lead mb-4">
+                <p class="lead mb-1">
                     You scored
                     <strong>{{ test.score }}</strong>
                     /
@@ -485,6 +485,7 @@
                     &mdash;
                     <strong>{{ test.percentage }}%</strong>
                 </p>
+                <p class="mb-4 text-white-50" style="font-size:0.9rem;">Experience Level: <strong class="text-white">{{ test.get_experience_level_display }}</strong></p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
@@ -495,7 +496,7 @@
         <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#22c55e,#16a34a);">
             <div class="card-body p-4 p-md-5 text-center">
                 <h1 class="display-5 fw-bold mb-2">Interview Ready</h1>
-                <p class="lead mb-4">
+                <p class="lead mb-1">
                     You scored
                     <strong>{{ test.score }}</strong>
                     /
@@ -503,6 +504,7 @@
                     &mdash;
                     <strong>{{ test.percentage }}%</strong>
                 </p>
+                <p class="mb-4 text-white-50" style="font-size:0.9rem;">Experience Level: <strong class="text-white">{{ test.get_experience_level_display }}</strong></p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Take Another Test</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
@@ -513,7 +515,7 @@
         <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
             <div class="card-body p-4 p-md-5 text-center">
                 <h1 class="display-5 fw-bold mb-2">Good Progress</h1>
-                <p class="lead mb-4">
+                <p class="lead mb-1">
                     You scored
                     <strong>{{ test.score }}</strong>
                     /
@@ -521,6 +523,7 @@
                     &mdash;
                     <strong>{{ test.percentage }}%</strong>
                 </p>
+                <p class="mb-4 text-white-50" style="font-size:0.9rem;">Experience Level: <strong class="text-white">{{ test.get_experience_level_display }}</strong></p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Practice Again</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
@@ -531,7 +534,7 @@
         <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#f97316,#ea580c);">
             <div class="card-body p-4 p-md-5 text-center">
                 <h1 class="display-5 fw-bold mb-2">Needs Improvement</h1>
-                <p class="lead mb-4">
+                <p class="lead mb-1">
                     You scored
                     <strong>{{ test.score }}</strong>
                     /
@@ -539,6 +542,7 @@
                     &mdash;
                     <strong>{{ test.percentage }}%</strong>
                 </p>
+                <p class="mb-4 text-white-50" style="font-size:0.9rem;">Experience Level: <strong class="text-white">{{ test.get_experience_level_display }}</strong></p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Try Again</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
@@ -549,7 +553,7 @@
         <div class="card border-0 shadow-sm text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
             <div class="card-body p-4 p-md-5 text-center">
                 <h1 class="display-5 fw-bold mb-2">Foundation Needs Work</h1>
-                <p class="lead mb-4">
+                <p class="lead mb-1">
                     You scored
                     <strong>{{ test.score }}</strong>
                     /
@@ -557,6 +561,7 @@
                     &mdash;
                     <strong>{{ test.percentage }}%</strong>
                 </p>
+                <p class="mb-4 text-white-50" style="font-size:0.9rem;">Experience Level: <strong class="text-white">{{ test.get_experience_level_display }}</strong></p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="{% url 'mcq_setup' %}" class="btn btn-light btn-lg px-4 fw-semibold">Start Over</a>
                     <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-lg px-4">Dashboard</a>
@@ -570,7 +575,10 @@
 {# ── 2. PERFORMANCE SUMMARY TILES ───────────────────────────────────── #}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4 p-md-5">
-        <h2 class="h5 fw-bold mb-4 text-dark">Performance Summary</h2>
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <h2 class="h5 fw-bold mb-0 text-dark">Performance Summary</h2>
+            <span class="badge rounded-pill text-bg-secondary" style="font-size:0.72rem;">{{ test.get_experience_level_display }}</span>
+        </div>
 
         <div class="row g-3 mb-3">
             <div class="col-6 col-xl-3">

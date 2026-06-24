@@ -91,6 +91,12 @@ class MCQTest(models.Model):
         IN_PROGRESS = "IN_PROGRESS", "In Progress"
         COMPLETED = "COMPLETED", "Completed"
 
+    class ExperienceLevel(models.TextChoices):
+        FRESHER   = "FRESHER",   "Fresher"
+        JUNIOR    = "JUNIOR",    "Junior"
+        MID_LEVEL = "MID_LEVEL", "Mid-Level"
+        SENIOR    = "SENIOR",    "Senior"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -116,6 +122,12 @@ class MCQTest(models.Model):
         choices=Status.choices,
         default=Status.IN_PROGRESS,
         verbose_name="Status",
+    )
+    experience_level = models.CharField(
+        max_length=20,
+        choices=ExperienceLevel.choices,
+        default=ExperienceLevel.FRESHER,
+        verbose_name="Experience Level",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="Submitted At")

@@ -33,6 +33,7 @@ class MCQTestAdmin(admin.ModelAdmin):
         "id",
         "user",
         "topic",
+        "experience_level",
         "total_questions",
         "score",
         "percentage",
@@ -40,7 +41,7 @@ class MCQTestAdmin(admin.ModelAdmin):
         "created_at",
         "submitted_at",
     )
-    list_filter = ("topic", "status", "created_at")
+    list_filter = ("topic", "status", "experience_level", "created_at")
     search_fields = ("user__username", "user__email", "topic__name")
     readonly_fields = ("created_at", "submitted_at")
 

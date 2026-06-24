@@ -44,6 +44,18 @@
                     </div>
 
                     <div class="mb-4">
+                        <label for="{{ form.experience_level.id_for_label }}" class="form-label fw-medium text-secondary">
+                            Experience Level
+                        </label>
+                        {{ form.experience_level }}
+                        {% if form.experience_level.errors %}
+                        <div class="text-danger mt-1 small">
+                            {% for error in form.experience_level.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
                         <label for="{{ form.question_count.id_for_label }}" class="form-label fw-medium text-secondary">
                             Number of Questions
                         </label>
@@ -91,8 +103,8 @@
                         <li class="d-flex align-items-start gap-3 mb-3">
                             <span class="badge bg-primary rounded-circle p-2 mt-1">2</span>
                             <div>
-                                <strong class="text-white">Balanced Difficulty Budget</strong>
-                                <p class="text-white-50 small mb-0">Questions are balanced dynamically: roughly 40% Easy, 30% Medium, and 30% Hard.</p>
+                                <strong class="text-white">Experience-Aware Difficulty</strong>
+                                <p class="text-white-50 small mb-0">Questions are balanced to your level — Fresher (80% Easy), Junior (60% Easy), Mid-Level (50% Easy), Senior (40% Easy).</p>
                             </div>
                         </li>
                         <li class="d-flex align-items-start gap-3">

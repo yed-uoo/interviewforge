@@ -31,17 +31,19 @@ def setup_test_view(request):
         if form.is_valid():
             topic = form.cleaned_data['topic']
             question_count = form.cleaned_data['question_count']
+            experience_level = form.cleaned_data['experience_level']
             
             try:
                 # Generate questions for the test session
-                questions = generate_test(topic.id, question_count)
+                questions = generate_test(topic.id, question_count, experience_level)
                 
                 # Create the MCQTest session
                 mcq_test = MCQTest.objects.create(
                     user=request.user,
                     topic=topic,
                     total_questions=question_count,
-                    status=MCQTest.Status.IN_PROGRESS
+                    status=MCQTest.Status.IN_PROGRESS,
+                    experience_level=experience_level,
                 )
                 print("MCQ TEST CREATED:", mcq_test.id)
                 

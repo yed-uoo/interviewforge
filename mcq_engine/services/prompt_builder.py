@@ -42,6 +42,7 @@ def _format_summary(summary: dict[str, Any]) -> str:
     lines = [
         "## ASSESSMENT SUMMARY",
         "",
+        f"  Experience Level   : {summary.get('experience_level', 'FRESHER')}",
         f"  Topic              : {summary['topic']}",
         f"  Total Questions    : {summary['total_questions']}",
         f"  Correct            : {summary['correct']}",
