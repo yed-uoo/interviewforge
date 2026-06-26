@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* ---- Simulation Layout ---- */
+    .sim-shell {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 1.5rem;
+        min-height: 70vh;
+    }
+
+    @media (max-width: 991.98px) {
+        .sim-shell {
+            grid-template-columns: 1fr;
+        }
+        .sim-sidebar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .75rem;
+            align-items: flex-start;
+        }
+        .sim-sidebar .section-label { width: 100%; }
+    }
+
+    /* ---- Sidebar ---- */
+    .sim-sidebar {
+        background: rgba(255,255,255,.7);
+        border: 1px solid rgba(148,163,184,.2);
+        border-radius: 1rem;
+        padding: 1.5rem 1.25rem;
+        position: sticky;
+        top: 90px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+
+    .section-label {
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: .6rem;
+    }
+
+    .q-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: .5rem;
+        border: 2px solid #e2e8f0;
+        background: #fff;
+        font-size: .8rem;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .q-btn:hover { border-color: #6366f1; color: #6366f1; }
+    .q-btn.answered {
+        background: #dcfce7;
+        border-color: #16a34a;
+        color: #16a34a;
+    }
+    .q-btn.current {
+        background: #6366f1;
+        border-color: #6366f1;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99,102,241,.35);
+    }
+
+    /* ---- Question Panel ---- */
+    .sim-panel {
+        background: rgba(255,255,255,.85);
+        border: 1px solid rgba(148,163,184,.2);
+        border-radius: 1rem;
+        padding: 2.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+    }
+
+    .q-header {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .q-number {
+        width: 40px;
+        height: 40px;
+        border-radius: .6rem;
+        background: #f1f5f9;
+        font-weight: 700;
+        font-size: .9rem;
+        color: #334155;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .q-text {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.55;
+    }
+
+    .q-textarea {
+        width: 100%;
+        min-height: 200px;
+        border: 2px solid #e2e8f0;
+        border-radius: .75rem;
+        padding: 1.1rem 1.25rem;
+        font-family: inherit;
+        font-size: .95rem;
+        color: #334155;
+        background: #f8fafc;
+        resize: vertical;
+        transition: border-color .2s, box-shadow .2s;
+        outline: none;
+    }
+    .q-textarea:focus {
+        border-color: #6366f1;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+    }
+    .q-textarea:disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    /* ---- Nav bar at bottom ---- */
+    .sim-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    /* ---- Progress bar ---- */
+    .progress-bar-sim {
+        height: 8px;
+        border-radius: 99px;
+    }
+
+    /* ---- Autosave indicator ---- */
+    #autosave-indicator {
+        font-size: .8rem;
+        transition: opacity .4s;
+    }
+
+    /* ---- Pulse dot ---- */
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .3; }
+    }
+    .saving-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f59e0b;
+        display: inline-block;
+        animation: pulse-dot 1s infinite;
+        vertical-align: middle;
+    }
+</style>
+
+{# ---- Meta header ---- #}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-2">
+            AI Interview Simulator
+        </span>
+        <h1 class="fw-bold mb-1 fs-4">{{ simulation.role }}</h1>
+        <span class="text-secondary small">{{ simulation.experience_level|title }} level</span>
+    </div>
+
+    <div class="text-end">
+        <div class="fw-semibold text-dark small mb-1">Questions Answered</div>
+        <div class="display-6 fw-bold text-primary" id="progress-text">
+            {{ completed_count }} / {{ total_questions }}
+        </div>
+        <div class="progress mt-2" style="width:180px; height:8px; border-radius:99px;">
+            {% if total_questions > 0 %}
+                {% with pct=completed_count|stringformat:"s" total=total_questions|stringformat:"s" %}
+                <div class="progress-bar bg-primary progress-bar-sim"
+                     id="progress-bar"
+                     role="progressbar"
+                     style="width: calc({{ completed_count }} / {{ total_questions }} * 100%)">
+                </div>
+                {% endwith %}
+            {% else %}
+                <div class="progress-bar bg-primary progress-bar-sim" id="progress-bar" style="width:0%"></div>
+            {% endif %}
+        </div>
+
+        <div id="autosave-indicator" class="text-secondary mt-2 opacity-0">
+            <span class="saving-dot"></span> Saving…
+        </div>
+    </div>
+</div>
+
+{# ---- Hidden data for JS ---- #}
+{{ answers_json|json_script:"sim-data" }}
+
+{# ---- Main layout ---- #}
+<div class="sim-shell">
+
+    {# ---- Sidebar ---- #}
+    <aside class="sim-sidebar">
+        <div class="section-label mb-2">HR Questions</div>
+        <div id="hr-nav" class="d-flex flex-wrap gap-2 mb-4">
+            {% for a in answers %}
+                {% if a.question_type == "HR" %}
+                <button
+                    class="q-btn {% if a.answer.strip %}answered{% endif %}"
+                    id="nav-btn-{{ a.order }}"
+                    onclick="goToQuestion({{ forloop.counter0 }}, true)"
+                    title="Q{{ a.order }} – {% if a.answer.strip %}Answered{% else %}Not answered{% endif %}"
+                    data-order="{{ a.order }}"
+                >
+                    {{ a.order }}
+                </button>
+                {% endif %}
+            {% endfor %}
+            {% if not answers %}
+                <span class="text-secondary small">None</span>
+            {% endif %}
+        </div>
+
+        <div class="section-label mb-2">Technical Questions</div>
+        <div id="tech-nav" class="d-flex flex-wrap gap-2">
+            {% for a in answers %}
+                {% if a.question_type == "TECHNICAL" %}
+                <button
+                    class="q-btn {% if a.answer.strip %}answered{% endif %}"
+                    id="nav-btn-{{ a.order }}"
+                    onclick="goToQuestion({{ forloop.counter0 }}, true)"
+                    title="Q{{ a.order }} – {% if a.answer.strip %}Answered{% else %}Not answered{% endif %}"
+                    data-order="{{ a.order }}"
+                >
+                    {{ a.order }}
+                </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </aside>
+
+    {# ---- Question Panel ---- #}
+    <section class="sim-panel" id="question-panel">
+
+        {# Question header #}
+        <div class="q-header">
+            <div class="q-number" id="q-number">1</div>
+            <span class="badge text-bg-light border text-secondary" id="q-type-badge">HR</span>
+            <span id="autosave-saved" class="text-success small ms-auto" style="display:none;">✓ Saved</span>
+        </div>
+
+        {# Question text #}
+        <p class="q-text mb-0" id="q-text">Loading…</p>
+
+        {# Answer textarea #}
+        <textarea
+            id="q-answer"
+            class="q-textarea"
+            placeholder="Type your answer here…"
+            rows="8"
+        ></textarea>
+
+        {# Bottom navigation #}
+        <div class="sim-nav">
+            <button class="btn btn-outline-secondary rounded-3 px-4" id="btn-prev" onclick="goToQuestion(currentIndex - 1, true)">
+                ← Previous
+            </button>
+
+            <span class="text-secondary small" id="q-counter">1 of {{ total_questions }}</span>
+
+            <button class="btn btn-primary rounded-3 px-4" id="btn-next" onclick="handleNext()">
+                Next →
+            </button>
+        </div>
+
+    </section>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+(() => {
+    // ── Parse embedded data (Django json_script) ─────────────────────────────
+    const simData = JSON.parse(document.getElementById("sim-data").textContent);
+    const answers = simData.answers;
+    const total = simData.totalQuestions;
+    const autosaveUrl = simData.autosaveUrl;
+    const simId = simData.simulationId;
+
+    // CSRF from cookie
+    function getCookie(name) {
+        const v = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+        return v ? v.pop() : "";
+    }
+    const csrf = getCookie("csrftoken");
+
+    // ── In-memory answer store (loaded from server) ──────────────────────────
+    const answerStore = {};
+    answers.forEach(a => {
+        answerStore[a.id] = a.savedAnswer || "";
+    });
+
+    // ── State ────────────────────────────────────────────────────────────────
+    const LS_KEY = `sim_q_index_${simId}`;
+    let currentIndex = parseInt(localStorage.getItem(LS_KEY) || "0");
+    if (currentIndex < 0 || currentIndex >= total) currentIndex = 0;
+
+    let autosaveTimer = null;
+    let isSaving = false;
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const qNumber    = document.getElementById("q-number");
+    const qType      = document.getElementById("q-type-badge");
+    const qText      = document.getElementById("q-text");
+    const qAnswer    = document.getElementById("q-answer");
+    const btnPrev    = document.getElementById("btn-prev");
+    const btnNext    = document.getElementById("btn-next");
+    const qCounter   = document.getElementById("q-counter");
+    const progressTx = document.getElementById("progress-text");
+    const progressBr = document.getElementById("progress-bar");
+    const indicator  = document.getElementById("autosave-indicator");
+    const savedTick  = document.getElementById("autosave-saved");
+
+    // ── Render a question ────────────────────────────────────────────────────
+    function renderQuestion(idx) {
+        if (total === 0) return;
+        const a = answers[idx];
+
+        qNumber.textContent = a.order;
+        qType.textContent   = a.questionType === "HR" ? "HR" : "Technical";
+        qType.className     = a.questionType === "HR"
+            ? "badge text-bg-primary border me-auto"
+            : "badge text-bg-info border me-auto";
+        qText.textContent   = a.question;
+        qAnswer.value       = answerStore[a.id];
+        qCounter.textContent = `${idx + 1} of ${total}`;
+
+        // Nav button highlight
+        document.querySelectorAll(".q-btn").forEach(b => b.classList.remove("current"));
+        const btn = document.getElementById(`nav-btn-${a.order}`);
+        if (btn) btn.classList.add("current");
+
+        // Prev / Next visibility
+        btnPrev.style.display = idx === 0 ? "none" : "inline-flex";
+        if (idx === total - 1) {
+            btnNext.textContent = "Submit Interview";
+            btnNext.classList.replace("btn-primary", "btn-success");
+        } else {
+            btnNext.textContent = "Next →";
+            if (!btnNext.classList.contains("btn-primary")) {
+                btnNext.classList.replace("btn-success", "btn-primary");
+            }
+        }
+
+        savedTick.style.display = "none";
+        localStorage.setItem(LS_KEY, idx);
+    }
+
+    // ── Go to a question (with autosave of current) ──────────────────────────
+    window.goToQuestion = function(idx, saveFirst = true) {
+        if (idx < 0 || idx >= total) return;
+        if (saveFirst && currentIndex !== idx) {
+            autosaveNow(currentIndex);
+        }
+        currentIndex = idx;
+        renderQuestion(currentIndex);
+    };
+
+    window.handleNext = function() {
+        if (currentIndex === total - 1) {
+            // Submit — save then redirect (placeholder, no submit endpoint yet)
+            autosaveNow(currentIndex, () => {
+                // Phase 5 will handle actual submission
+                alert("Your answers have been saved. Submission will be available in the next phase.");
+            });
+        } else {
+            goToQuestion(currentIndex + 1, true);
+        }
+    };
+
+    // ── Autosave a specific index ────────────────────────────────────────────
+    function autosaveNow(idx, callback) {
+        if (total === 0) return;
+        const a = answers[idx];
+        const currentText = (idx === currentIndex) ? qAnswer.value : answerStore[a.id];
+
+        // Skip if unchanged
+        if (currentText === (a.savedAnswer || "") && answerStore[a.id] === currentText) {
+            if (callback) callback();
+            return;
+        }
+
+        answerStore[a.id] = currentText;
+        showSaving();
+
+        fetch(autosaveUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf,
+            },
+            body: JSON.stringify({ answer_id: a.id, answer: currentText }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                a.savedAnswer = currentText;
+                updateNav(idx);
+                updateProgress();
+                showSaved();
+            }
+            if (callback) callback();
+        })
+        .catch(() => {
+            if (callback) callback();
+        });
+    }
+
+    // ── Autosave on keyup (debounced 5 s) ────────────────────────────────────
+    qAnswer.addEventListener("input", () => {
+        clearTimeout(autosaveTimer);
+        savedTick.style.display = "none";
+        autosaveTimer = setTimeout(() => autosaveNow(currentIndex), 5000);
+    });
+
+    // ── Save before unload ───────────────────────────────────────────────────
+    window.addEventListener("beforeunload", () => {
+        if (total === 0) return;
+        const a = answers[currentIndex];
+        answerStore[a.id] = qAnswer.value;
+        navigator.sendBeacon(autosaveUrl, JSON.stringify({
+            answer_id: a.id,
+            answer: qAnswer.value,
+            // sendBeacon uses default content-type; CSRF not sent but harmless for autosave
+        }));
+    });
+
+    // ── Sidebar nav update ───────────────────────────────────────────────────
+    function updateNav(idx) {
+        const a = answers[idx];
+        const btn = document.getElementById(`nav-btn-${a.order}`);
+        if (!btn) return;
+        if (answerStore[a.id] && answerStore[a.id].trim()) {
+            btn.classList.add("answered");
+        } else {
+            btn.classList.remove("answered");
+        }
+    }
+
+    // ── Progress update ──────────────────────────────────────────────────────
+    function updateProgress() {
+        let count = 0;
+        answers.forEach(a => {
+            if (answerStore[a.id] && answerStore[a.id].trim()) count++;
+        });
+        if (progressTx) progressTx.textContent = `${count} / ${total}`;
+        if (progressBr && total > 0) {
+            progressBr.style.width = `${Math.round((count / total) * 100)}%`;
+        }
+    }
+
+    // ── Indicator helpers ────────────────────────────────────────────────────
+    function showSaving() {
+        indicator.style.opacity = "1";
+        indicator.innerHTML = '<span class="saving-dot"></span> Saving…';
+    }
+    function showSaved() {
+        indicator.innerHTML = '<span class="text-success">✓ Saved</span>';
+        savedTick.style.display = "inline";
+        setTimeout(() => { indicator.style.opacity = "0"; }, 2500);
+    }
+
+    // ── Initial render ───────────────────────────────────────────────────────
+    if (total > 0) {
+        renderQuestion(currentIndex);
+        updateProgress();
+    } else {
+        qText.textContent = "No questions available for this simulation.";
+    }
+})();
+</script>
+{% endblock %}

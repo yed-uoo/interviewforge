@@ -9,11 +9,11 @@
 
         <div>
             <span class="badge text-bg-success rounded-pill px-3 py-2 mb-3">
-                Interview Questions Ready
+                Interview Simulation Ready
             </span>
 
             <h1 class="display-6 fw-bold mb-3">
-                AI Interview Question Set
+                AI Interview Simulation
             </h1>
 
             <p class="fs-4 text-secondary mb-0">
@@ -27,7 +27,7 @@
 
         <a href="{% url 'generate_interview' %}"
            class="btn btn-outline-primary btn-lg rounded-3">
-            Generate New Set
+            New Simulation
         </a>
 
     </div>
@@ -102,6 +102,27 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Start Mock Interview Action -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 bg-light border-start border-primary border-4">
+                <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4">
+                    <div>
+                        <h4 class="fw-bold mb-2">Ready to practice?</h4>
+                        <p class="text-secondary mb-0">
+                            Practice answering your HR and Technical questions in a realistic interview environment. Coding questions are excluded from the simulation.
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{% url 'start_simulation' session.id %}" class="btn btn-primary btn-lg px-4 py-3 rounded-3 text-nowrap">
+                            Start Mock Interview
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
