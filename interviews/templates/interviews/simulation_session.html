@@ -173,9 +173,15 @@
 {# ---- Meta header ---- #}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
-        <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-2">
-            AI Interview Simulator
-        </span>
+        {% if is_practice %}
+            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 mb-2">
+                Practice Mode
+            </span>
+        {% else %}
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-2">
+                AI Interview Simulator
+            </span>
+        {% endif %}
         <h1 class="fw-bold mb-1 fs-4">{{ simulation.role }}</h1>
         <span class="text-secondary small">{{ simulation.experience_level|title }} level</span>
     </div>
@@ -204,6 +210,17 @@
         </div>
     </div>
 </div>
+
+{% if is_practice %}
+<div class="alert alert-warning rounded-3 mb-4 d-flex align-items-center justify-content-between">
+    <span>
+        <strong>Practice Mode:</strong> Reattempt the generated questions for revision. Answers are not saved or sent for AI analysis.
+    </span>
+    <a href="{% url 'interview_history' %}" class="btn btn-sm btn-outline-warning text-dark border-warning fw-semibold px-3 rounded-2">
+        Exit Practice
+    </a>
+</div>
+{% endif %}
 
 {# ---- Hidden data for JS ---- #}
 {{ answers_json|json_script:"sim-data" }}
@@ -288,6 +305,38 @@
     </section>
 </div>
 
+{# ---- Submit Confirmation Modal ---- #}
+<div class="modal fade" id="submitModal" tabindex="-1" aria-labelledby="submitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="submitModalLabel">Submit Interview?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <p class="text-secondary mb-3">You have answered:</p>
+                <div class="d-flex align-items-baseline gap-2 mb-1">
+                    <span class="display-6 fw-bold text-primary" id="modal-answered">—</span>
+                    <span class="text-secondary" id="modal-total">of — questions</span>
+                </div>
+                <p class="text-secondary small mb-3" id="modal-unanswered"></p>
+                <div class="alert alert-warning rounded-3 small mb-0">
+                    <strong>After submission you cannot edit your answers.</strong>
+                </div>
+            </div>
+            <div class="modal-footer border-0 gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Continue Interview</button>
+                <button type="button" class="btn btn-success rounded-3 px-4" id="btn-confirm-submit">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Hidden form for POST submit — avoids fetch CSRF complexity #}
+<form id="submit-form" method="POST" action="{% url 'submit_simulation' simulation.id %}" style="display:none;">
+    {% csrf_token %}
+</form>
+
 {% endblock %}
 
 
@@ -315,9 +364,21 @@
     });
 
     // ── State ────────────────────────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const isResume = urlParams.get('resume') === 'true';
     const LS_KEY = `sim_q_index_${simId}`;
-    let currentIndex = parseInt(localStorage.getItem(LS_KEY) || "0");
-    if (currentIndex < 0 || currentIndex >= total) currentIndex = 0;
+    let currentIndex;
+
+    if (isResume) {
+        let firstUnansweredIdx = answers.findIndex(a => !a.savedAnswer || !a.savedAnswer.trim());
+        currentIndex = (firstUnansweredIdx !== -1) ? firstUnansweredIdx : 0;
+    } else {
+        currentIndex = parseInt(localStorage.getItem(LS_KEY));
+        if (isNaN(currentIndex) || currentIndex < 0 || currentIndex >= total) {
+            let firstUnansweredIdx = answers.findIndex(a => !a.savedAnswer || !a.savedAnswer.trim());
+            currentIndex = (firstUnansweredIdx !== -1) ? firstUnansweredIdx : 0;
+        }
+    }
 
     let autosaveTimer = null;
     let isSaving = false;
@@ -357,12 +418,20 @@
         // Prev / Next visibility
         btnPrev.style.display = idx === 0 ? "none" : "inline-flex";
         if (idx === total - 1) {
-            btnNext.textContent = "Submit Interview";
-            btnNext.classList.replace("btn-primary", "btn-success");
+            if (simData.isPractice) {
+                btnNext.textContent = "Exit Practice";
+                btnNext.classList.replace("btn-primary", "btn-warning");
+                btnNext.classList.replace("btn-success", "btn-warning");
+            } else {
+                btnNext.textContent = "Submit Interview";
+                btnNext.classList.replace("btn-primary", "btn-success");
+                btnNext.classList.replace("btn-warning", "btn-success");
+            }
         } else {
             btnNext.textContent = "Next →";
             if (!btnNext.classList.contains("btn-primary")) {
                 btnNext.classList.replace("btn-success", "btn-primary");
+                btnNext.classList.replace("btn-warning", "btn-primary");
             }
         }
 
@@ -382,15 +451,32 @@
 
     window.handleNext = function() {
         if (currentIndex === total - 1) {
-            // Submit — save then redirect (placeholder, no submit endpoint yet)
-            autosaveNow(currentIndex, () => {
-                // Phase 5 will handle actual submission
-                alert("Your answers have been saved. Submission will be available in the next phase.");
-            });
+            if (simData.isPractice) {
+                window.location.href = "{% url 'interview_history' %}";
+            } else {
+                // Autosave current answer, then open confirmation modal
+                autosaveNow(currentIndex, () => {
+                    const answered = Object.values(answerStore).filter(v => v && v.trim()).length;
+                    const unanswered = total - answered;
+                    document.getElementById("modal-answered").textContent = answered;
+                    document.getElementById("modal-total").textContent = `of ${total} questions`;
+                    document.getElementById("modal-unanswered").textContent =
+                        unanswered > 0
+                            ? `${unanswered} question${unanswered === 1 ? '' : 's'} unanswered.`
+                            : "All questions answered. Great work!";
+                    const modal = new bootstrap.Modal(document.getElementById("submitModal"));
+                    modal.show();
+                });
+            }
         } else {
             goToQuestion(currentIndex + 1, true);
         }
     };
+
+    // Confirm submit — POST the hidden form
+    document.getElementById("btn-confirm-submit").addEventListener("click", () => {
+        document.getElementById("submit-form").submit();
+    });
 
     // ── Autosave a specific index ────────────────────────────────────────────
     function autosaveNow(idx, callback) {
@@ -405,6 +491,15 @@
         }
 
         answerStore[a.id] = currentText;
+
+        if (simData.isPractice) {
+            a.savedAnswer = currentText;
+            updateNav(idx);
+            updateProgress();
+            if (callback) callback();
+            return;
+        }
+
         showSaving();
 
         fetch(autosaveUrl, {
@@ -439,7 +534,7 @@
 
     // ── Save before unload ───────────────────────────────────────────────────
     window.addEventListener("beforeunload", () => {
-        if (total === 0) return;
+        if (total === 0 || simData.isPractice) return;
         const a = answers[currentIndex];
         answerStore[a.id] = qAnswer.value;
         navigator.sendBeacon(autosaveUrl, JSON.stringify({
@@ -478,6 +573,7 @@
         indicator.style.opacity = "1";
         indicator.innerHTML = '<span class="saving-dot"></span> Saving…';
     }
+
     function showSaved() {
         indicator.innerHTML = '<span class="text-success">✓ Saved</span>';
         savedTick.style.display = "inline";

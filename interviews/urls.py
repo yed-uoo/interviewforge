@@ -6,6 +6,10 @@ from .views import (
     start_simulation_view,
     simulation_session_view,
     simulation_autosave_view,
+    submit_simulation_view,
+    simulation_results_view,
+    resume_simulation_view,
+    practice_questions_view,
 )
 
 
@@ -44,5 +48,29 @@ urlpatterns = [
         'simulation/<int:simulation_id>/autosave/',
         simulation_autosave_view,
         name='simulation_autosave',
+    ),
+
+    path(
+        'simulation/<int:simulation_id>/submit/',
+        submit_simulation_view,
+        name='submit_simulation',
+    ),
+
+    path(
+        'simulation/<int:simulation_id>/results/',
+        simulation_results_view,
+        name='simulation_results',
+    ),
+
+    path(
+        'simulation/<int:simulation_id>/resume/',
+        resume_simulation_view,
+        name='resume_simulation',
+    ),
+
+    path(
+        'simulation/<int:simulation_id>/practice/',
+        practice_questions_view,
+        name='practice_questions',
     ),
 ]

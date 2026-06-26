@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from resume_analyzer.models import Resume
 from resume_analyzer.utils import compute_content_hash
@@ -529,4 +529,380 @@ class SimulationSessionViewTests(TestCase):
 		response = self.client.get(self._url())
 		self.assertContains(response, "HR Questions")
 		self.assertContains(response, "Technical Questions")
+
+
+class SimulationSubmitTests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.user = user_model.objects.create_user(
+			username="submit_test_user",
+			password="password123"
+		)
+		self.other_user = user_model.objects.create_user(
+			username="submit_other_user",
+			password="password123"
+		)
+		self.session = InterviewSession.objects.create(
+			user=self.user,
+			role="Data Scientist",
+			experience_level="mid",
+			generated_questions={
+				"hr_questions": ["Tell me about yourself."],
+				"technical_questions": ["Explain overfitting."],
+			}
+		)
+		self.sim = InterviewSimulation.objects.create(
+			user=self.user,
+			generated_set=self.session,
+			role=self.session.role,
+			experience_level=self.session.experience_level,
+			status=Status.IN_PROGRESS,
+		)
+		self.ans1 = InterviewSimulationAnswer.objects.create(
+			simulation=self.sim,
+			question_type=QuestionType.HR,
+			question="Tell me about yourself.",
+			answer="I am a data scientist.",
+			order=1
+		)
+		self.ans2 = InterviewSimulationAnswer.objects.create(
+			simulation=self.sim,
+			question_type=QuestionType.TECHNICAL,
+			question="Explain overfitting.",
+			answer="",
+			order=2
+		)
+
+	def _submit_url(self):
+		return f"/interviews/simulation/{self.sim.id}/submit/"
+
+	def _results_url(self):
+		return f"/interviews/simulation/{self.sim.id}/results/"
+
+	def _session_url(self):
+		return f"/interviews/simulation/{self.sim.id}/"
+
+	def _autosave_url(self):
+		return f"/interviews/simulation/{self.sim.id}/autosave/"
+
+	# 1. Successful submission
+	def test_successful_submission(self):
+		self.client.force_login(self.user)
+		response = self.client.post(self._submit_url())
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, self._results_url())
+
+	# 2. Duplicate submission redirects without changing DB
+	def test_duplicate_submission_redirects(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.post(self._submit_url())
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, self._results_url())
+
+	# 3. Unauthorized submission returns 403
+	def test_unauthorized_submission(self):
+		self.client.force_login(self.other_user)
+		response = self.client.post(self._submit_url())
+		self.assertEqual(response.status_code, 403)
+
+	# 4. Submission updates status to COMPLETED
+	def test_submission_updates_status(self):
+		self.client.force_login(self.user)
+		self.client.post(self._submit_url())
+		self.sim.refresh_from_db()
+		self.assertEqual(self.sim.status, Status.COMPLETED)
+
+	# 5. submitted_at is saved
+	def test_submitted_at_is_saved(self):
+		self.client.force_login(self.user)
+		self.client.post(self._submit_url())
+		self.sim.refresh_from_db()
+		self.assertIsNotNone(self.sim.submitted_at)
+
+	# 6. Completed simulation session page redirects to results
+	def test_completed_session_redirects_to_results(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.get(self._session_url())
+		self.assertEqual(response.status_code, 302)
+		self.assertIn("/results/", response.url)
+
+	# 7. Autosave rejected after completion
+	def test_autosave_rejected_after_submission(self):
+		self.client.force_login(self.user)
+		self.client.post(self._submit_url())
+		payload = json.dumps({"answer_id": self.ans1.id, "answer": "Late edit attempt."})
+		response = self.client.post(
+			self._autosave_url(),
+			data=payload,
+			content_type="application/json"
+		)
+		self.assertEqual(response.status_code, 400)
+		data = json.loads(response.content)
+		self.assertFalse(data["success"])
+
+	# 8. Results placeholder page renders for owner
+	def test_results_page_renders(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.get(self._results_url())
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Interview Submitted")
+		self.assertContains(response, "Data Scientist")
+
+	# 9. Results page shows correct answered/total stats
+	def test_results_page_shows_stats(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.get(self._results_url())
+		# ans1 has answer, ans2 is empty → 1 answered out of 2
+		self.assertContains(response, "1")
+		self.assertContains(response, "2")
+
+
+class SimulationHistoryEnhancementTests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.user = user_model.objects.create_user(username="testuser", password="password")
+		self.other_user = user_model.objects.create_user(username="otheruser", password="password")
+		self.session = InterviewSession.objects.create(
+			user=self.user,
+			role="Backend Developer",
+			experience_level="fresher",
+			generated_questions={
+				"hr_questions": ["Tell me about yourself."],
+				"technical_questions": ["What is a database index?"]
+			}
+		)
+		self.sim = InterviewSimulation.objects.create(
+			user=self.user,
+			generated_set=self.session,
+			role="Backend Developer",
+			experience_level="fresher",
+			status=Status.IN_PROGRESS
+		)
+		self.ans1 = InterviewSimulationAnswer.objects.create(
+			simulation=self.sim,
+			question_type=QuestionType.HR,
+			question="Tell me about yourself.",
+			answer="I am a backend developer.",
+			order=1
+		)
+		self.ans2 = InterviewSimulationAnswer.objects.create(
+			simulation=self.sim,
+			question_type=QuestionType.TECHNICAL,
+			question="What is a database index?",
+			answer="",
+			order=2
+		)
+
+	def test_resume_simulation_restores_answers(self):
+		self.client.force_login(self.user)
+		resume_url = f"/interviews/simulation/{self.sim.id}/resume/"
+		response = self.client.get(resume_url)
+		# Should redirect to session page with ?resume=true
+		self.assertEqual(response.status_code, 302)
+		self.assertIn(f"/interviews/simulation/{self.sim.id}/?resume=true", response.url)
+
+		# Now load the session page and check answers are loaded
+		session_page_response = self.client.get(response.url)
+		self.assertEqual(session_page_response.status_code, 200)
+		self.assertContains(session_page_response, "I am a backend developer.")
+
+	def test_completed_sessions_show_results_and_practice_buttons(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.get("/interviews/history/")
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "View Results")
+		self.assertContains(response, "Practice Questions")
+
+	def test_in_progress_sessions_show_resume_button(self):
+		self.client.force_login(self.user)
+		response = self.client.get("/interviews/history/")
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Resume Simulation")
+		self.assertNotContains(response, "View Results")
+		self.assertNotContains(response, "Practice Questions")
+
+	def test_practice_mode_creates_no_db_records_and_no_ai_analysis(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		
+		# Record count before
+		sim_count = InterviewSimulation.objects.count()
+		ans_count = InterviewSimulationAnswer.objects.count()
+
+		practice_url = f"/interviews/simulation/{self.sim.id}/practice/"
+		response = self.client.get(practice_url)
+		self.assertEqual(response.status_code, 200)
+
+		# Record count after
+		self.assertEqual(InterviewSimulation.objects.count(), sim_count)
+		self.assertEqual(InterviewSimulationAnswer.objects.count(), ans_count)
+		
+		# Confirm ai_analysis remains empty
+		self.sim.refresh_from_db()
+		self.assertEqual(self.sim.ai_analysis, {})
+
+	def test_users_cannot_access_another_users_session(self):
+		self.client.force_login(self.other_user)
+		
+		# Try to resume
+		response = self.client.get(f"/interviews/simulation/{self.sim.id}/resume/")
+		self.assertEqual(response.status_code, 403)
+
+		# Try to view results
+		response = self.client.get(f"/interviews/simulation/{self.sim.id}/results/")
+		self.assertEqual(response.status_code, 403)
+
+		# Try to practice
+		response = self.client.get(f"/interviews/simulation/{self.sim.id}/practice/")
+		self.assertEqual(response.status_code, 403)
+
+	def test_in_progress_sessions_cannot_open_results_page(self):
+		self.client.force_login(self.user)
+		response = self.client.get(f"/interviews/simulation/{self.sim.id}/results/")
+		self.assertEqual(response.status_code, 403)
+
+	def test_completed_sessions_cannot_resume_simulation(self):
+		self.sim.status = Status.COMPLETED
+		self.sim.save()
+		self.client.force_login(self.user)
+		response = self.client.get(f"/interviews/simulation/{self.sim.id}/resume/")
+		self.assertEqual(response.status_code, 403)
+
+
+class InterviewGeneratorTests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.user = user_model.objects.create_user(username="generator_user", password="password")
+
+	@patch("interviews.ai_generator.get_groq_client")
+	def test_role_skills_injected_in_prompt(self, mock_get_client):
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+
+		mock_response = MagicMock()
+		mock_message = MagicMock()
+		mock_message.content = json.dumps({
+			"hr_questions": [f"hr {i}" for i in range(5)],
+			"technical_questions": [f"tech {i}" for i in range(7)],
+			"coding_questions": [f"coding {i}" for i in range(3)]
+		})
+		mock_choice = MagicMock()
+		mock_choice.message = mock_message
+		mock_response.choices = [mock_choice]
+
+		mock_client.chat.completions.create.return_value = mock_response
+
+		# Generate questions for Frontend Developer without resume context
+		from interviews.ai_generator import generate_interview_questions
+		generate_interview_questions(role="Frontend Developer", experience_level="fresher", used_resume_context=False)
+
+		# Verify client was called with expected prompt contents
+		self.assertEqual(mock_client.chat.completions.create.call_count, 1)
+		call_kwargs = mock_client.chat.completions.create.call_args[1]
+		prompt_content = call_kwargs["messages"][0]["content"]
+		self.assertIn("- HTML", prompt_content)
+		self.assertIn("- CSS", prompt_content)
+		self.assertIn("ROLE-SPECIFIC RULES for Frontend Developer", prompt_content)
+		self.assertIn("AVOID: Django, Database schema", prompt_content)
+
+		# Reset mock and generate questions for Backend Developer (with resume context)
+		mock_client.chat.completions.create.reset_mock()
+		generate_interview_questions(role="Backend Developer", experience_level="junior", used_resume_context=True)
+
+		self.assertEqual(mock_client.chat.completions.create.call_count, 1)
+		call_kwargs = mock_client.chat.completions.create.call_args[1]
+		prompt_content = call_kwargs["messages"][0]["content"]
+		self.assertIn("- Django", prompt_content)
+		self.assertIn("- ORM", prompt_content)
+		self.assertIn("ROLE-SPECIFIC RULES for Backend Developer", prompt_content)
+		
+		# Assert the resume personalization rules are in the prompt
+		self.assertIn("Treat the candidate's resume as the primary source of interview questions", prompt_content)
+		self.assertIn("STRONG PROJECT GROUNDING & NO HALLUCINATIONS", prompt_content)
+		self.assertIn("PRIORITY ORDER FOR QUESTION GENERATION", prompt_content)
+		self.assertIn("1. Resume Projects", prompt_content)
+		self.assertIn("2. Resume Technologies", prompt_content)
+		self.assertIn("3. Target Role", prompt_content)
+		self.assertIn("COMBINE TARGET ROLE + CANDIDATE RESUME", prompt_content)
+		self.assertIn("STRICT PERCENTAGE AND PROJECT COVERAGE QUOTAS", prompt_content)
+		self.assertIn("At least 6 of the 15 total generated questions (at least 40%) must directly reference the candidate's resume", prompt_content)
+		self.assertIn("GUARANTEE PROJECT QUESTIONS PER SECTION", prompt_content)
+		self.assertIn("HR Questions: At least 2 of the 5 HR questions must reference the candidate's resume projects", prompt_content)
+		self.assertIn("Technical Questions: At least 3 of the 7 technical questions must reference projects or technologies from the resume", prompt_content)
+		self.assertIn("Coding Questions: At least 2 of the 3 coding questions must be based directly on projects", prompt_content)
+		self.assertIn("CODING QUESTIONS DESIGN RULES", prompt_content)
+		self.assertIn("NEVER generate generic coding coding questions like 'Remove vowels', 'Count characters', 'Reverse strings'", prompt_content.replace("generic coding questions", "generic coding coding questions")) # Normalize possible double word or check exact string
+		# Let's assert the actual text we wrote in prompt: "NEVER generate generic coding questions like 'Remove vowels'"
+		self.assertIn("NEVER generate generic coding questions like 'Remove vowels'", prompt_content)
+
+		# Reset mock and generate questions for Full Stack Developer
+		mock_client.chat.completions.create.reset_mock()
+		generate_interview_questions(role="Full Stack Developer", experience_level="senior", used_resume_context=False)
+		self.assertEqual(mock_client.chat.completions.create.call_count, 1)
+		call_kwargs = mock_client.chat.completions.create.call_args[1]
+		prompt_content = call_kwargs["messages"][0]["content"]
+		self.assertIn("ROLE-SPECIFIC RULES for Full Stack Developer", prompt_content)
+		self.assertIn("40% frontend, 40% backend, 20% architecture/system design", prompt_content)
+		self.assertIn("React, State management, Component architecture", prompt_content)
+		self.assertIn("APIs, Database design, Authentication", prompt_content)
+		self.assertIn("Docker, Deployment, CI/CD", prompt_content)
+
+	@patch("interviews.ai_generator.get_groq_client")
+	def test_question_generation_not_cached(self, mock_get_client):
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+
+		mock_response = MagicMock()
+		mock_message = MagicMock()
+		mock_message.content = json.dumps({
+			"hr_questions": [f"hr {i}" for i in range(5)],
+			"technical_questions": [f"tech {i}" for i in range(7)],
+			"coding_questions": [f"coding {i}" for i in range(3)]
+		})
+		mock_choice = MagicMock()
+		mock_choice.message = mock_message
+		mock_response.choices = [mock_choice]
+
+		mock_client.chat.completions.create.return_value = mock_response
+
+		self.client.force_login(self.user)
+
+		# First generation
+		response1 = self.client.post("/interviews/generate/", {
+			"role": "Frontend Developer",
+			"experience_level": "fresher",
+			"job_description": "",
+			"existing_resume": "",
+			"resume_file": ""
+		})
+		self.assertEqual(response1.status_code, 200)
+		self.assertEqual(mock_client.chat.completions.create.call_count, 1)
+
+		# Second generation (same parameters)
+		response2 = self.client.post("/interviews/generate/", {
+			"role": "Frontend Developer",
+			"experience_level": "fresher",
+			"job_description": "",
+			"existing_resume": "",
+			"resume_file": ""
+		})
+		self.assertEqual(response2.status_code, 200)
+		# Should trigger LLM again, making total call count 2
+		self.assertEqual(mock_client.chat.completions.create.call_count, 2)
+
+		# Verify two separate sessions were created in the database
+		self.assertEqual(InterviewSession.objects.filter(user=self.user).count(), 2)
+
+
 

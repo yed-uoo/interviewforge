@@ -7,15 +7,20 @@ from .models import InterviewSession
 
 @login_required
 def interview_history(request):
-    sessions = InterviewSession.objects.filter(
+    simulations = InterviewSimulation.objects.filter(
         user=request.user
-    ).order_by('-created_at')
+    ).prefetch_related('answers').order_by('-started_at')
+
+    for sim in simulations:
+        answers = list(sim.answers.all())
+        sim.total_questions = len(answers)
+        sim.answered_count = sum(1 for a in answers if a.answer.strip())
 
     return render(
         request,
         'interviews/history.html',
         {
-            'sessions': sessions
+            'simulations': simulations
         }
     )
 
@@ -252,3 +257,121 @@ def simulation_autosave_view(request, simulation_id):
     answer.save(update_fields=["answer", "updated_at"])
 
     return JsonResponse({"success": True})
+
+
+@login_required
+@require_POST
+def submit_simulation_view(request, simulation_id):
+    simulation = get_object_or_404(InterviewSimulation, id=simulation_id)
+
+    if simulation.user != request.user:
+        return HttpResponseForbidden("You do not own this simulation.")
+
+    # Duplicate submission — already completed, just redirect
+    if simulation.status == Status.COMPLETED:
+        return redirect(f"/interviews/simulation/{simulation_id}/results/")
+
+    answers = list(simulation.answers.all())
+    answered_count = sum(1 for a in answers if a.answer.strip())
+
+    simulation.status = Status.COMPLETED
+    simulation.submitted_at = timezone.now()
+    simulation.save(update_fields=["status", "submitted_at", "updated_at"])
+
+    logger.info(
+        f"simulation_submitted: Simulation {simulation_id} submitted by "
+        f"{request.user.username} — {answered_count}/{len(answers)} answered"
+    )
+
+    return redirect(f"/interviews/simulation/{simulation_id}/results/")
+
+
+@login_required
+def simulation_results_view(request, simulation_id):
+    simulation = get_object_or_404(InterviewSimulation, id=simulation_id)
+
+    if simulation.user != request.user:
+        return HttpResponseForbidden("You do not own this simulation.")
+
+    if simulation.status == Status.IN_PROGRESS:
+        return HttpResponseForbidden("In-progress simulations cannot view results.")
+
+    answers = list(simulation.answers.all().order_by("order"))
+    total_questions = len(answers)
+    answered_count = sum(1 for a in answers if a.answer.strip())
+    unanswered_count = total_questions - answered_count
+
+    ai = simulation.ai_analysis or {}
+    strengths = ai.get("strengths", [])
+    if isinstance(strengths, str):
+        strengths = [strengths]
+    weaknesses = ai.get("weaknesses", [])
+    if isinstance(weaknesses, str):
+        weaknesses = [weaknesses]
+    recommendations = ai.get("recommendations", [])
+    if isinstance(recommendations, str):
+        recommendations = [recommendations]
+
+    return render(request, "interviews/simulation_results.html", {
+        "simulation": simulation,
+        "total_questions": total_questions,
+        "answered_count": answered_count,
+        "unanswered_count": unanswered_count,
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "recommendations": recommendations,
+    })
+
+
+@login_required
+def resume_simulation_view(request, simulation_id):
+    simulation = get_object_or_404(InterviewSimulation, id=simulation_id)
+
+    if simulation.user != request.user:
+        return HttpResponseForbidden("You do not own this simulation.")
+
+    if simulation.status == Status.COMPLETED:
+        return HttpResponseForbidden("Completed simulations cannot resume simulation.")
+
+    return redirect(f"/interviews/simulation/{simulation.id}/?resume=true")
+
+
+@login_required
+def practice_questions_view(request, simulation_id):
+    simulation = get_object_or_404(InterviewSimulation, id=simulation_id)
+
+    if simulation.user != request.user:
+        return HttpResponseForbidden("You do not own this simulation.")
+
+    if simulation.status != Status.COMPLETED:
+        return HttpResponseForbidden("Only completed simulations can be practiced.")
+
+    answers = list(simulation.answers.all().order_by("order"))
+    total_questions = len(answers)
+
+    # Load original answers as empty in the practice page to reattempt
+    answers_json = {
+        "simulationId": simulation.id,
+        "autosaveUrl": "",
+        "totalQuestions": total_questions,
+        "isPractice": True,
+        "answers": [
+            {
+                "id": a.id,
+                "order": a.order,
+                "questionType": a.question_type,
+                "question": a.question,
+                "savedAnswer": "",
+            }
+            for a in answers
+        ],
+    }
+
+    return render(request, "interviews/simulation_session.html", {
+        "simulation": simulation,
+        "answers": answers,
+        "total_questions": total_questions,
+        "completed_count": 0,
+        "answers_json": answers_json,
+        "is_practice": True,
+    })

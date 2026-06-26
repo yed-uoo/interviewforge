@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .results-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-radius: 1.25rem;
+        padding: 3rem 2.5rem;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+    .results-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 50%, rgba(99,102,241,.25), transparent 55%),
+            radial-gradient(circle at 80% 20%, rgba(16,185,129,.18), transparent 50%);
+        pointer-events: none;
+    }
+    .stat-card {
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: .85rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: rgba(255,255,255,.5);
+        margin-top: .4rem;
+    }
+    .ai-pending-card {
+        border: 2px dashed rgba(148,163,184,.35);
+        border-radius: 1rem;
+        padding: 2.5rem;
+        text-align: center;
+    }
+    .pulse-ring {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(99,102,241,.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        font-size: 1.75rem;
+        animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99,102,241,.3); }
+        50% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+    }
+</style>
+
+<div class="mx-auto" style="max-width: 860px;">
+
+    {# ---- Hero card ---- #}
+    <div class="results-hero mb-4">
+        <div style="position:relative;">
+            <span class="badge bg-success rounded-pill px-3 py-2 mb-3 d-inline-block" style="font-size:.8rem;">
+                ✓ Interview Submitted
+            </span>
+
+            <h1 class="display-6 fw-bold mb-1">{{ simulation.role }}</h1>
+            <p class="mb-4" style="color:rgba(255,255,255,.65);">{{ simulation.experience_level|title }} level</p>
+
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ answered_count }}</div>
+                        <div class="stat-label">Answered</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ total_questions }}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ unanswered_count }}</div>
+                        <div class="stat-label">Skipped</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        {% if total_questions > 0 %}
+                            <div class="stat-value">
+                                {% widthratio answered_count total_questions 100 %}<span style="font-size:1.4rem;">%</span>
+                            </div>
+                        {% else %}
+                            <div class="stat-value">—</div>
+                        {% endif %}
+                        <div class="stat-label">Completion</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if simulation.submitted_at %}
+            <p class="mt-4 mb-0 small" style="color:rgba(255,255,255,.45);">
+                Submitted on {{ simulation.submitted_at|date:"M d, Y • h:i A" }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ---- AI Evaluation / Pending ---- #}
+    {% if simulation.ai_analysis %}
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+            <h3 class="fw-bold mb-4 text-primary">AI Analysis & Feedback</h3>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h5 class="fw-semibold text-secondary mb-2">Overall Score</h5>
+                        <div class="display-5 fw-bold text-success">{{ simulation.score }}/100</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h5 class="fw-semibold text-secondary mb-2">Overall Readiness</h5>
+                        <p class="fs-5 fw-medium text-dark mb-0">{{ simulation.ai_analysis.overall_readiness|default:simulation.ai_analysis.overallReadiness|default:"N/A" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="fw-semibold text-dark mb-2">HR Analysis</h5>
+                <p class="text-secondary">{{ simulation.ai_analysis.hr_analysis|default:simulation.ai_analysis.hrAnalysis|default:"N/A" }}</p>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="mb-4">
+                <h5 class="fw-semibold text-dark mb-2">Technical Analysis</h5>
+                <p class="text-secondary">{{ simulation.ai_analysis.technical_analysis|default:simulation.ai_analysis.technicalAnalysis|default:"N/A" }}</p>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <h5 class="fw-semibold text-success mb-2">Strengths</h5>
+                    {% if strengths %}
+                        <ul class="text-secondary ps-3 mb-0">
+                            {% for strength in strengths %}
+                                <li>{{ strength }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-secondary mb-0">None identified.</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h5 class="fw-semibold text-danger mb-2">Weaknesses</h5>
+                    {% if weaknesses %}
+                        <ul class="text-secondary ps-3 mb-0">
+                            {% for weakness in weaknesses %}
+                                <li>{{ weakness }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-secondary mb-0">None identified.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="mb-4">
+                <h5 class="fw-semibold text-dark mb-2">Recommendations</h5>
+                {% if recommendations %}
+                    <ul class="text-secondary ps-3 mb-0">
+                        {% for rec in recommendations %}
+                            <li>{{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-secondary mb-0">No recommendations.</p>
+                {% endif %}
+            </div>
+
+            <hr class="my-4">
+
+            <div class="mb-0">
+                <h5 class="fw-semibold text-dark mb-2">Communication Feedback</h5>
+                <p class="text-secondary mb-0">{{ simulation.ai_analysis.communication_feedback|default:simulation.ai_analysis.communicationFeedback|default:"N/A" }}</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="ai-pending-card mb-4">
+            <div class="pulse-ring">🤖</div>
+            <h4 class="fw-bold mb-2">AI Evaluation Pending</h4>
+            <p class="text-secondary mb-0">
+                Your answers have been saved. AI-powered scoring and personalised feedback
+                will be available in the next update.
+            </p>
+        </div>
+    {% endif %}
+
+    {# ---- Actions ---- #}
+    <div class="d-flex flex-column flex-sm-row gap-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg rounded-3 px-4">
+            Return to Dashboard
+        </a>
+        <a href="{% url 'interview_history' %}" class="btn btn-outline-secondary btn-lg rounded-3 px-4">
+            View History
+        </a>
+    </div>
+
+</div>
+{% endblock %}
