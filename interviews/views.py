@@ -9,12 +9,38 @@ from .models import InterviewSession
 def interview_history(request):
     simulations = InterviewSimulation.objects.filter(
         user=request.user
-    ).prefetch_related('answers').order_by('-started_at')
+    ).select_related('generated_set__resume').prefetch_related('answers').order_by('-created_at')
 
     for sim in simulations:
         answers = list(sim.answers.all())
         sim.total_questions = len(answers)
-        sim.answered_count = sum(1 for a in answers if a.answer.strip())
+        sim.answered_questions = sum(1 for a in answers if a.answer.strip())
+
+        if sim.total_questions > 0:
+            sim.progress_percentage = round((sim.answered_questions / sim.total_questions) * 100)
+        else:
+            sim.progress_percentage = 0
+
+        # Temporary debugging to verify simulation lifecycle status
+        logger.info(
+            f"Simulation {sim.id} - {sim.role} - {sim.status}"
+        )
+
+        # State determination
+        if sim.status.upper() == "COMPLETED":
+            sim.state = "completed"
+            sim.display_state = "completed"
+        elif sim.answered_questions > 0:
+            sim.state = "in_progress"
+            sim.display_state = "in_progress"
+        else:
+            sim.state = "not_started"
+            sim.display_state = "not_started"
+
+    logger.info(
+        f"History simulations: "
+        f"{list(simulations.values('id','role','status'))}"
+    )
 
     return render(
         request,
@@ -82,6 +108,49 @@ def generate_interview(request):
                     used_resume_context=resume_context['used_resume_context']
                 )
 
+                # Pre-create simulation and its answers in GENERATED state immediately
+                sim = InterviewSimulation.objects.create(
+                    user=request.user,
+                    generated_set=session,
+                    role=role,
+                    experience_level=experience_level,
+                    status=Status.GENERATED,
+                )
+                logger.info(
+                    f"Created simulation: id={sim.id}, role={sim.role}, status={sim.status}"
+                )
+
+                hr_qs = questions.get("hr_questions", [])
+                tech_qs = questions.get("technical_questions", [])
+                answers_to_create = []
+                order = 1
+                for q in hr_qs:
+                    answers_to_create.append(
+                        InterviewSimulationAnswer(
+                            simulation=sim,
+                            question_type=QuestionType.HR,
+                            question=q,
+                            answer="",
+                            order=order
+                        )
+                    )
+                    order += 1
+
+                for q in tech_qs:
+                    answers_to_create.append(
+                        InterviewSimulationAnswer(
+                            simulation=sim,
+                            question_type=QuestionType.TECHNICAL,
+                            question=q,
+                            answer="",
+                            order=order
+                        )
+                    )
+                    order += 1
+
+                if answers_to_create:
+                    InterviewSimulationAnswer.objects.bulk_create(answers_to_create)
+
                 return render(
                     request,
                     'interviews/result.html',
@@ -133,15 +202,22 @@ def start_simulation_view(request, set_id):
     if question_set.user != request.user:
         return HttpResponseForbidden("You do not own this question set.")
 
-    in_progress_sim = InterviewSimulation.objects.filter(
-        generated_set=question_set,
-        status=Status.IN_PROGRESS
-    ).first()
+    # Check if a simulation already exists for this question set
+    sim = InterviewSimulation.objects.filter(
+        generated_set=question_set
+    ).exclude(status=Status.COMPLETED).first()
 
-    if in_progress_sim:
-        logger.info(f"simulation_resumed: Resumed in-progress simulation with ID {in_progress_sim.id}")
-        return redirect(f"/interviews/simulation/{in_progress_sim.id}/")
+    if sim:
+        # If the simulation was newly generated, mark it in_progress
+        if sim.status == Status.GENERATED:
+            sim.status = Status.IN_PROGRESS
+            sim.save(update_fields=["status"])
+            logger.info(f"simulation_started: Started simulation with ID {sim.id} (formerly GENERATED)")
+        else:
+            logger.info(f"simulation_resumed: Resumed simulation with ID {sim.id} (status: {sim.status})")
+        return redirect(f"/interviews/simulation/{sim.id}/")
 
+    # Backwards compatibility for legacy sessions
     sim = InterviewSimulation.objects.create(
         user=request.user,
         generated_set=question_set,
@@ -243,7 +319,7 @@ def simulation_autosave_view(request, simulation_id):
     if simulation.user != request.user:
         return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
 
-    if simulation.status == Status.COMPLETED:
+    if simulation.status == Status.COMPLETED or simulation.submitted_at is not None:
         return JsonResponse({"success": False, "error": "Simulation already completed."}, status=400)
 
     try:
@@ -257,6 +333,34 @@ def simulation_autosave_view(request, simulation_id):
     answer.answer = answer_text
     answer.save(update_fields=["answer", "updated_at"])
 
+    # Recalculate answered count and total questions
+    answers = list(simulation.answers.all())
+    total_questions = len(answers)
+    answered_count = sum(1 for a in answers if a.answer.strip())
+
+    # Update status immediately based on status rules
+    if answered_count == 0:
+        simulation.status = Status.GENERATED
+        simulation.save(update_fields=["status", "updated_at"])
+    elif answered_count < total_questions:
+        simulation.status = Status.IN_PROGRESS
+        simulation.save(update_fields=["status", "updated_at"])
+    else:
+        # transition to COMPLETED and kick off background evaluation
+        if simulation.status != Status.COMPLETED:
+            simulation.status = Status.COMPLETED
+            simulation.analysis_status = AnalysisStatus.PENDING
+            simulation.submitted_at = timezone.now()
+            simulation.save(update_fields=["status", "analysis_status", "submitted_at", "updated_at"])
+            run_evaluation_in_background(simulation.id)
+        else:
+            simulation.save(update_fields=["status", "updated_at"])
+
+    logger.info(
+        f"Saved answer: simulation_id={simulation.id}, "
+        f"answered_count={answered_count}, status={simulation.status}"
+    )
+
     return JsonResponse({"success": True})
 
 
@@ -268,8 +372,8 @@ def submit_simulation_view(request, simulation_id):
     if simulation.user != request.user:
         return HttpResponseForbidden("You do not own this simulation.")
 
-    # Duplicate submission — already completed, just redirect
-    if simulation.status == Status.COMPLETED:
+    # Duplicate submission — already submitted, just redirect
+    if simulation.submitted_at is not None:
         return redirect(f"/interviews/simulation/{simulation_id}/results/")
 
     answers = list(simulation.answers.all())
@@ -279,6 +383,11 @@ def submit_simulation_view(request, simulation_id):
     simulation.analysis_status = AnalysisStatus.PENDING
     simulation.submitted_at = timezone.now()
     simulation.save(update_fields=["status", "analysis_status", "submitted_at", "updated_at"])
+
+    logger.info(
+        f"Saved answer: simulation_id={simulation.id}, "
+        f"answered_count={answered_count}, status={simulation.status}"
+    )
 
     logger.info(
         f"simulation_submitted: Simulation {simulation_id} submitted by "

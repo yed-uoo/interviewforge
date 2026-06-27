@@ -51,6 +51,7 @@ class InterviewSession(models.Model):
 
 
 class Status(models.TextChoices):
+    GENERATED = "GENERATED", "Generated"
     IN_PROGRESS = "IN_PROGRESS", "In Progress"
     COMPLETED = "COMPLETED", "Completed"
 
@@ -117,6 +118,34 @@ class InterviewSimulation(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+    @property
+    def questions_answered(self):
+        if hasattr(self, '_questions_answered'):
+            return self._questions_answered
+        return sum(1 for a in self.answers.all() if a.answer.strip())
+
+    @questions_answered.setter
+    def questions_answered(self, value):
+        self._questions_answered = value
+
+    @property
+    def total_questions(self):
+        if hasattr(self, '_total_questions'):
+            return self._total_questions
+        return len(self.answers.all())
+
+    @total_questions.setter
+    def total_questions(self, value):
+        self._total_questions = value
+
+    @property
+    def answered_questions(self):
+        return self.questions_answered
+
+    @answered_questions.setter
+    def answered_questions(self, value):
+        self.questions_answered = value
 
 
 class InterviewSimulationAnswer(models.Model):

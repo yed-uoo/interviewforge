@@ -460,6 +460,41 @@ class SimulationSessionViewTests(TestCase):
 		ans.refresh_from_db()
 		self.assertEqual(ans.answer, "Updated answer text.")
 
+	def test_autosave_updates_status_and_properties(self):
+		self.client.force_login(self.user)
+		
+		for ans in self.answers:
+			ans.answer = ""
+			ans.save()
+		
+		self.sim.status = Status.GENERATED
+		self.sim.save()
+		
+		self.assertEqual(self.sim.questions_answered, 0)
+		self.assertEqual(self.sim.status, Status.GENERATED)
+		
+		ans = self.answers[0]
+		payload = json.dumps({"answer_id": ans.id, "answer": "Answer 1"})
+		self.client.post(
+			self._autosave_url(),
+			data=payload,
+			content_type="application/json"
+		)
+		self.sim.refresh_from_db()
+		self.assertEqual(self.sim.questions_answered, 1)
+		self.assertEqual(self.sim.status, Status.IN_PROGRESS)
+		
+		for a in self.answers[1:]:
+			payload = json.dumps({"answer_id": a.id, "answer": "Filled answer"})
+			self.client.post(
+				self._autosave_url(),
+				data=payload,
+				content_type="application/json"
+			)
+		self.sim.refresh_from_db()
+		self.assertEqual(self.sim.questions_answered, 4)
+		self.assertEqual(self.sim.status, Status.COMPLETED)
+
 	# 5. Autosave forbidden for other users
 	def test_autosave_forbidden_for_other_user(self):
 		self.client.force_login(self.other_user)
@@ -727,9 +762,31 @@ class SimulationHistoryEnhancementTests(TestCase):
 		self.client.force_login(self.user)
 		response = self.client.get("/interviews/history/")
 		self.assertEqual(response.status_code, 200)
-		self.assertContains(response, "Resume Simulation")
+		self.assertContains(response, "Resume Interview")
 		self.assertNotContains(response, "View Results")
 		self.assertNotContains(response, "Practice Questions")
+
+	def test_not_started_sessions_show_start_button(self):
+		self.ans1.answer = ""
+		self.ans1.save()
+		self.client.force_login(self.user)
+		response = self.client.get("/interviews/history/")
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Start Interview")
+		self.assertNotContains(response, "Resume Interview")
+		self.assertNotContains(response, "View Results")
+
+	def test_generated_sessions_show_start_button(self):
+		self.sim.status = Status.GENERATED
+		self.sim.save()
+		self.ans1.answer = ""
+		self.ans1.save()
+		self.client.force_login(self.user)
+		response = self.client.get("/interviews/history/")
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Start Interview")
+		self.assertNotContains(response, "Resume Interview")
+		self.assertNotContains(response, "View Results")
 
 	def test_practice_mode_creates_no_db_records_and_no_ai_analysis(self):
 		self.sim.status = Status.COMPLETED
@@ -1168,7 +1225,7 @@ class InterviewEvaluatorTests(TestCase):
 		resp = self.client.get(f"/interviews/simulation/{sim.id}/results/")
 		self.assertEqual(resp.status_code, 200)
 		self.assertContains(resp, "Score Overview")
-		self.assertContains(resp, "Question-by-Question Analysis")
+		self.assertContains(resp, "Interview Feedback")
 		self.assertContains(resp, "Interview Readiness")
 
 	# ── 10. Results page shows failed state when FAILED ───────────────────
