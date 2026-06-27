@@ -112,7 +112,7 @@ class InterviewResumeCacheTests(TestCase):
 
 
 from django.contrib.admin.sites import site
-from .models import InterviewSession, InterviewSimulation, InterviewSimulationAnswer, Status, QuestionType
+from .models import InterviewSession, InterviewSimulation, InterviewSimulationAnswer, Status, QuestionType, AnalysisStatus
 from .admin import InterviewSimulationAdmin, InterviewSimulationAnswerAdmin
 
 
@@ -905,4 +905,305 @@ class InterviewGeneratorTests(TestCase):
 		self.assertEqual(InterviewSession.objects.filter(user=self.user).count(), 2)
 
 
+import json as _json
+from interviews.ai_evaluator import evaluate_simulation, score_label, readiness_label
 
+
+class InterviewEvaluatorTests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.user = user_model.objects.create_user(
+			username="eval_user",
+			password="testpassword123"
+		)
+		self.session = InterviewSession.objects.create(
+			user=self.user,
+			role="Backend Developer",
+			experience_level="junior",
+			generated_questions={
+				"hr_questions": ["Tell me about yourself."],
+				"technical_questions": ["Explain REST APIs."]
+			}
+		)
+
+	def _make_simulation(self):
+		sim = InterviewSimulation.objects.create(
+			user=self.user,
+			generated_set=self.session,
+			role="Backend Developer",
+			experience_level="junior",
+			status=Status.COMPLETED,
+			analysis_status=AnalysisStatus.PENDING,
+		)
+		InterviewSimulationAnswer.objects.create(
+			simulation=sim, question_type=QuestionType.HR,
+			question="Tell me about yourself.", answer="I am a developer with 2 years of experience.", order=1
+		)
+		InterviewSimulationAnswer.objects.create(
+			simulation=sim, question_type=QuestionType.TECHNICAL,
+			question="Explain REST APIs.", answer="REST is a stateless protocol for web services.", order=2
+		)
+		return sim
+
+	def _mock_groq_response(self, sim):
+		n = sim.answers.count()
+		return _json.dumps({
+			"overall_score": 75,
+			"communication_score": 70,
+			"technical_score": 80,
+			"confidence_score": 65,
+			"clarity_score": 72,
+			"problem_solving_score": 68,
+			"readiness_score": 74,
+			"strengths": ["Clear communication", "Good technical foundation"],
+			"weaknesses": ["Needs deeper system design knowledge"],
+			"improvement_plan": ["Step 1: Study system design", "Step 2: Practice mock interviews"],
+			"recommended_topics": ["System Design", "Database Optimization"],
+			"resume_gap_analysis": {
+				"missing_skills": ["Docker", "Kubernetes"],
+				"weak_areas": ["Caching"],
+				"demonstrated_vs_claimed": ["Python", "Django"]
+			},
+			"per_question_analysis": [
+				{
+					"question_id": i + 1,
+					"score": 75,
+					"feedback": "Good answer with reasonable depth.",
+					"strengths": ["Clear"],
+					"weaknesses": ["Could be more specific"],
+					"improved_answer": "A more detailed answer would mention specific use cases."
+				}
+				for i in range(n)
+			]
+		})
+
+	# ── 1. analysis_status = PENDING immediately after submit ─────────────
+	@patch("interviews.views.run_evaluation_in_background")
+	def test_analysis_status_pending_on_submit(self, mock_bg):
+		sim = InterviewSimulation.objects.create(
+			user=self.user,
+			generated_set=self.session,
+			role="Backend Developer",
+			experience_level="junior",
+			status=Status.IN_PROGRESS,
+		)
+		InterviewSimulationAnswer.objects.create(
+			simulation=sim, question_type=QuestionType.HR,
+			question="Q1", answer="A1", order=1
+		)
+
+		self.client.force_login(self.user)
+		resp = self.client.post(f"/interviews/simulation/{sim.id}/submit/")
+		self.assertRedirects(resp, f"/interviews/simulation/{sim.id}/results/", fetch_redirect_response=False)
+
+		sim.refresh_from_db()
+		self.assertEqual(sim.status, Status.COMPLETED)
+		self.assertEqual(sim.analysis_status, AnalysisStatus.PENDING)
+		self.assertTrue(mock_bg.called)
+
+	# ── 2. analysis_status = COMPLETED after evaluate_simulation() ────────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_analysis_status_completed_after_evaluation(self, mock_get_client):
+		sim = self._make_simulation()
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = self._mock_groq_response(sim)
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+
+		sim.refresh_from_db()
+		self.assertEqual(sim.analysis_status, AnalysisStatus.COMPLETED)
+		self.assertEqual(sim.overall_score, 75)
+
+	# ── 3. analysis_status = FAILED when Groq raises ──────────────────────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_analysis_status_failed_on_groq_error(self, mock_get_client):
+		sim = self._make_simulation()
+		mock_get_client.side_effect = Exception("API key missing")
+
+		evaluate_simulation(sim.id)
+
+		sim.refresh_from_db()
+		self.assertEqual(sim.analysis_status, AnalysisStatus.FAILED)
+
+	# ── 4. answer_completion_score formula ────────────────────────────────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_answer_completion_score_calculation(self, mock_get_client):
+		sim = InterviewSimulation.objects.create(
+			user=self.user, generated_set=self.session,
+			role="Backend Developer", experience_level="junior",
+			status=Status.COMPLETED, analysis_status=AnalysisStatus.PENDING,
+		)
+		# 1 answered, 1 empty → 50%
+		InterviewSimulationAnswer.objects.create(
+			simulation=sim, question_type=QuestionType.HR,
+			question="Q1", answer="I am a developer.", order=1
+		)
+		InterviewSimulationAnswer.objects.create(
+			simulation=sim, question_type=QuestionType.TECHNICAL,
+			question="Q2", answer="", order=2
+		)
+
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = self._mock_groq_response(sim)
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+		sim.refresh_from_db()
+		self.assertEqual(sim.answer_completion_score, 50)
+
+	# ── 5. Empty answer gets very low per-question score ──────────────────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_empty_answer_scored_low(self, mock_get_client):
+		sim = self._make_simulation()
+		# Override first answer to empty
+		ans = sim.answers.order_by("order").first()
+		ans.answer = ""
+		ans.save()
+
+		low_score_response = _json.dumps({
+			"overall_score": 10,
+			"communication_score": 5,
+			"technical_score": 5,
+			"confidence_score": 5,
+			"clarity_score": 5,
+			"problem_solving_score": 5,
+			"readiness_score": 10,
+			"strengths": [],
+			"weaknesses": ["No answers provided"],
+			"improvement_plan": ["Step 1: Attempt all questions"],
+			"recommended_topics": ["Interview preparation"],
+			"resume_gap_analysis": {
+				"missing_skills": [],
+				"weak_areas": [],
+				"demonstrated_vs_claimed": []
+			},
+			"per_question_analysis": [
+				{"question_id": 1, "score": 2, "feedback": "No answer.",
+				 "strengths": [], "weaknesses": ["Empty"], "improved_answer": "..."},
+				{"question_id": 2, "score": 75, "feedback": "Good.",
+				 "strengths": ["Clear"], "weaknesses": [], "improved_answer": "..."},
+			]
+		})
+
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = low_score_response
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+		ans.refresh_from_db()
+		self.assertLessEqual(ans.score, 10)
+
+	# ── 6. Per-question analytics persist to InterviewSimulationAnswer ─────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_per_question_analytics_persisted(self, mock_get_client):
+		sim = self._make_simulation()
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = self._mock_groq_response(sim)
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+
+		answers = list(sim.answers.order_by("order"))
+		for ans in answers:
+			ans.refresh_from_db()
+			self.assertEqual(ans.score, 75)
+			self.assertIn("Good answer", ans.feedback)
+			self.assertIsInstance(ans.strengths, list)
+			self.assertIsInstance(ans.weaknesses, list)
+			self.assertNotEqual(ans.improved_answer, "")
+
+	# ── 7. ai_analysis JSON blob is persisted with all expected keys ───────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_ai_analysis_json_persisted(self, mock_get_client):
+		sim = self._make_simulation()
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = self._mock_groq_response(sim)
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+		sim.refresh_from_db()
+
+		ai = sim.ai_analysis
+		for key in ["strengths", "weaknesses", "improvement_plan",
+		            "recommended_topics", "resume_gap_analysis", "per_question_analysis"]:
+			self.assertIn(key, ai, msg=f"ai_analysis missing key: {key}")
+
+	# ── 8. Results page shows loading state when PENDING ──────────────────
+	def test_results_page_loading_state_when_pending(self):
+		sim = InterviewSimulation.objects.create(
+			user=self.user, generated_set=self.session,
+			role="Backend Developer", experience_level="junior",
+			status=Status.COMPLETED, analysis_status=AnalysisStatus.PENDING,
+		)
+		self.client.force_login(self.user)
+		resp = self.client.get(f"/interviews/simulation/{sim.id}/results/")
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, "Generating your personalised analysis")
+
+	# ── 9. Results page renders full dashboard when COMPLETED ─────────────
+	@patch("interviews.ai_evaluator.get_groq_client")
+	def test_results_page_full_dashboard_when_completed(self, mock_get_client):
+		sim = self._make_simulation()
+		mock_client = MagicMock()
+		mock_get_client.return_value = mock_client
+		mock_response = MagicMock()
+		mock_response.choices[0].message.content = self._mock_groq_response(sim)
+		mock_client.chat.completions.create.return_value = mock_response
+
+		evaluate_simulation(sim.id)
+		sim.refresh_from_db()
+
+		self.client.force_login(self.user)
+		resp = self.client.get(f"/interviews/simulation/{sim.id}/results/")
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, "Score Overview")
+		self.assertContains(resp, "Question-by-Question Analysis")
+		self.assertContains(resp, "Interview Readiness")
+
+	# ── 10. Results page shows failed state when FAILED ───────────────────
+	def test_results_page_failed_state(self):
+		sim = InterviewSimulation.objects.create(
+			user=self.user, generated_set=self.session,
+			role="Backend Developer", experience_level="junior",
+			status=Status.COMPLETED, analysis_status=AnalysisStatus.FAILED,
+		)
+		self.client.force_login(self.user)
+		resp = self.client.get(f"/interviews/simulation/{sim.id}/results/")
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, "AI Evaluation Failed")
+
+	# ── 11. analysis-status API returns correct JSON ───────────────────────
+	def test_analysis_status_api_returns_json(self):
+		sim = InterviewSimulation.objects.create(
+			user=self.user, generated_set=self.session,
+			role="Backend Developer", experience_level="junior",
+			status=Status.COMPLETED, analysis_status=AnalysisStatus.PROCESSING,
+		)
+		self.client.force_login(self.user)
+		resp = self.client.get(f"/interviews/simulation/{sim.id}/analysis-status/")
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(resp.json(), {"status": "PROCESSING"})
+
+	# ── 12. score_label and readiness_label helpers ───────────────────────
+	def test_score_label_helper(self):
+		self.assertEqual(score_label(20), "Needs Improvement")
+		self.assertEqual(score_label(50), "Average")
+		self.assertEqual(score_label(70), "Good")
+		self.assertEqual(score_label(90), "Excellent")
+
+	def test_readiness_label_helper(self):
+		self.assertEqual(readiness_label(30), "Beginner")
+		self.assertEqual(readiness_label(60), "Intermediate")
+		self.assertEqual(readiness_label(80), "Good")
+		self.assertEqual(readiness_label(90), "Interview Ready")

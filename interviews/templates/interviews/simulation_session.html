@@ -305,37 +305,8 @@
     </section>
 </div>
 
-{# ---- Submit Confirmation Modal ---- #}
-<div class="modal fade" id="submitModal" tabindex="-1" aria-labelledby="submitModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="submitModalLabel">Submit Interview?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-3">
-                <p class="text-secondary mb-3">You have answered:</p>
-                <div class="d-flex align-items-baseline gap-2 mb-1">
-                    <span class="display-6 fw-bold text-primary" id="modal-answered">—</span>
-                    <span class="text-secondary" id="modal-total">of — questions</span>
-                </div>
-                <p class="text-secondary small mb-3" id="modal-unanswered"></p>
-                <div class="alert alert-warning rounded-3 small mb-0">
-                    <strong>After submission you cannot edit your answers.</strong>
-                </div>
-            </div>
-            <div class="modal-footer border-0 gap-2">
-                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Continue Interview</button>
-                <button type="button" class="btn btn-success rounded-3 px-4" id="btn-confirm-submit">Submit</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-{# Hidden form for POST submit — avoids fetch CSRF complexity #}
-<form id="submit-form" method="POST" action="{% url 'submit_simulation' simulation.id %}" style="display:none;">
-    {% csrf_token %}
-</form>
+
 
 {% endblock %}
 
@@ -454,18 +425,23 @@
             if (simData.isPractice) {
                 window.location.href = "{% url 'interview_history' %}";
             } else {
-                // Autosave current answer, then open confirmation modal
+                // Autosave current answer, then confirm submission
                 autosaveNow(currentIndex, () => {
-                    const answered = Object.values(answerStore).filter(v => v && v.trim()).length;
-                    const unanswered = total - answered;
-                    document.getElementById("modal-answered").textContent = answered;
-                    document.getElementById("modal-total").textContent = `of ${total} questions`;
-                    document.getElementById("modal-unanswered").textContent =
-                        unanswered > 0
-                            ? `${unanswered} question${unanswered === 1 ? '' : 's'} unanswered.`
-                            : "All questions answered. Great work!";
-                    const modal = new bootstrap.Modal(document.getElementById("submitModal"));
-                    modal.show();
+                    const ok = confirm(
+                        "Submit interview? After submission you cannot edit your answers."
+                    );
+                    if (ok) {
+                        const form = document.createElement("form");
+                        form.method = "POST";
+                        form.action = "{% url 'submit_simulation' simulation.id %}";
+                        const csrf_input = document.createElement("input");
+                        csrf_input.type = "hidden";
+                        csrf_input.name = "csrfmiddlewaretoken";
+                        csrf_input.value = csrf;
+                        form.appendChild(csrf_input);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
                 });
             }
         } else {
@@ -473,10 +449,6 @@
         }
     };
 
-    // Confirm submit — POST the hidden form
-    document.getElementById("btn-confirm-submit").addEventListener("click", () => {
-        document.getElementById("submit-form").submit();
-    });
 
     // ── Autosave a specific index ────────────────────────────────────────────
     function autosaveNow(idx, callback) {

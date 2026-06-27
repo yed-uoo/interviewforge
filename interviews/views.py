@@ -121,7 +121,8 @@ def generate_interview(request):
 import logging
 from django.shortcuts import redirect
 from django.http import HttpResponseForbidden
-from .models import InterviewSimulation, InterviewSimulationAnswer, Status, QuestionType
+from .models import InterviewSimulation, InterviewSimulationAnswer, Status, QuestionType, AnalysisStatus
+from .ai_evaluator import run_evaluation_in_background, score_label, readiness_label
 
 logger = logging.getLogger(__name__)
 
@@ -275,13 +276,17 @@ def submit_simulation_view(request, simulation_id):
     answered_count = sum(1 for a in answers if a.answer.strip())
 
     simulation.status = Status.COMPLETED
+    simulation.analysis_status = AnalysisStatus.PENDING
     simulation.submitted_at = timezone.now()
-    simulation.save(update_fields=["status", "submitted_at", "updated_at"])
+    simulation.save(update_fields=["status", "analysis_status", "submitted_at", "updated_at"])
 
     logger.info(
         f"simulation_submitted: Simulation {simulation_id} submitted by "
         f"{request.user.username} — {answered_count}/{len(answers)} answered"
     )
+
+    # Fire async evaluation — non-blocking
+    run_evaluation_in_background(simulation_id)
 
     return redirect(f"/interviews/simulation/{simulation_id}/results/")
 
@@ -301,6 +306,7 @@ def simulation_results_view(request, simulation_id):
     answered_count = sum(1 for a in answers if a.answer.strip())
     unanswered_count = total_questions - answered_count
 
+    # Extract ai_analysis blob sections
     ai = simulation.ai_analysis or {}
     strengths = ai.get("strengths", [])
     if isinstance(strengths, str):
@@ -308,19 +314,54 @@ def simulation_results_view(request, simulation_id):
     weaknesses = ai.get("weaknesses", [])
     if isinstance(weaknesses, str):
         weaknesses = [weaknesses]
-    recommendations = ai.get("recommendations", [])
-    if isinstance(recommendations, str):
-        recommendations = [recommendations]
+    improvement_plan = ai.get("improvement_plan", [])
+    if isinstance(improvement_plan, str):
+        improvement_plan = [improvement_plan]
+    recommended_topics = ai.get("recommended_topics", [])
+    resume_gap = ai.get("resume_gap_analysis", {})
+
+    # Score benchmark labels for template
+    score_fields = [
+        ("Overall",         simulation.overall_score),
+        ("Communication",   simulation.communication_score),
+        ("Technical",       simulation.technical_score),
+        ("Confidence",      simulation.confidence_score),
+        ("Clarity",         simulation.clarity_score),
+        ("Problem Solving", simulation.problem_solving_score),
+    ]
+    score_cards = [
+        {"label": label, "score": score, "benchmark": score_label(score)}
+        for label, score in score_fields
+    ]
+
+    readiness = readiness_label(simulation.readiness_score)
 
     return render(request, "interviews/simulation_results.html", {
         "simulation": simulation,
         "total_questions": total_questions,
         "answered_count": answered_count,
         "unanswered_count": unanswered_count,
+        "answers": answers,
+        "score_cards": score_cards,
+        "readiness": readiness,
         "strengths": strengths,
         "weaknesses": weaknesses,
-        "recommendations": recommendations,
+        "improvement_plan": improvement_plan,
+        "recommended_topics": recommended_topics,
+        "resume_gap": resume_gap,
+        "analysis_status": simulation.analysis_status,
     })
+
+
+@login_required
+def simulation_analysis_status_view(request, simulation_id):
+    """Lightweight JSON endpoint polled by the results page JS."""
+    simulation = get_object_or_404(InterviewSimulation, id=simulation_id)
+
+    if simulation.user != request.user:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    return JsonResponse({"status": simulation.analysis_status})
 
 
 @login_required
